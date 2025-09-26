@@ -26,10 +26,12 @@ def test_csv_obfuscation_replaces_sensitive_fields(monkeypatch):
     inp = io.StringIO(input_csv)
     out = io.StringIO()
 
-    obfuscate_csv_stream(inp, out, sensitive_fields=["email", "phone"], primary_key_field="id")
+    obfuscate_csv_stream(
+        inp, out, sensitive_fields=["email", "phone"], primary_key_field="id"
+    )
 
     out.seek(0)
-    result = out.read() 
+    result = out.read()
 
     assert "john@example.com" not in result
     assert "jane@example.com" not in result
@@ -43,7 +45,9 @@ def test_csv_obfuscation_handles_missing_field(monkeypatch):
     inp = io.StringIO(input_csv)
     out = io.StringIO()
 
-    obfuscate_csv_stream(inp, out, sensitive_fields=["nonexistent_field"], primary_key_field="id")
+    obfuscate_csv_stream(
+        inp, out, sensitive_fields=["nonexistent_field"], primary_key_field="id"
+    )
 
     out.seek(0)
     result = out.read()

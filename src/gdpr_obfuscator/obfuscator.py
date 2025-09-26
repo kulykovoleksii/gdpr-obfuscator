@@ -1,4 +1,5 @@
 """Core obfuscation logic (streaming CSV)."""
+
 from typing import Iterable, List, IO
 import csv
 import hmac
@@ -9,13 +10,19 @@ import os
 # Key environment variable name
 KEY_ENV = "OBFUSCATOR_KEY"
 
+
 def _get_key() -> bytes:
     key = os.getenv(KEY_ENV)
     if not key:
-        raise RuntimeError(f"Obfuscator key missing. Set ${KEY_ENV} environment variable.")
+        raise RuntimeError(
+            f"Obfuscator key missing. Set ${KEY_ENV} environment variable."
+        )
     return key.encode("utf-8")
 
-def obfuscate_value(key: bytes, primary_value: str, field_name: str, length: int = 16) -> str:
+
+def obfuscate_value(
+    key: bytes, primary_value: str, field_name: str, length: int = 16
+) -> str:
     if primary_value is None:
         primary_value = ""
     hm = hmac.new(key, digestmod=hashlib.sha256)
@@ -42,11 +49,11 @@ def obfuscate_csv_stream(
     if key is None:
         key = _get_key()
 
-
     reader = csv.DictReader(input_stream, dialect=csv_dialect)
-    writer = csv.DictWriter(output_stream, fieldnames=reader.fieldnames, dialect=csv_dialect)
+    writer = csv.DictWriter(
+        output_stream, fieldnames=reader.fieldnames, dialect=csv_dialect
+    )
     writer.writeheader()
-
 
     for row in reader:
         pk = row.get(primary_key_field, "")
