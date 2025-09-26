@@ -1,7 +1,7 @@
 import io
 import os
 import pytest
-from src.gdpr_obfuscator.obfuscator import obfuscate_value, obfuscate_csv_stream
+from gdpr_obfuscator.obfuscator import obfuscate_value, obfuscate_csv_stream
 
 
 def test_obfuscate_value_is_deterministic():
