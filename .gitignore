@@ -3,6 +3,7 @@
 
 .vscode/
 
-/tests/__pycache__/
+/tests/__pycache__/*
 /tests/.pytest_cache/
 /src/gdpr_obfuscator/__pycache__/
+.DS_Store
