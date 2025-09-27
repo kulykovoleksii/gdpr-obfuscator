@@ -1,6 +1,7 @@
 import io
-import os
 import pytest
+import csv
+import string
 from gdpr_obfuscator.obfuscator import obfuscate_value, obfuscate_csv_stream
 
 
@@ -31,12 +32,33 @@ def test_csv_obfuscation_replaces_sensitive_fields(monkeypatch):
     )
 
     out.seek(0)
-    result = out.read()
+    result_text = out.read()
 
-    assert "john@example.com" not in result
-    assert "jane@example.com" not in result
-    assert "5551234" not in result
-    assert "5555678" not in result
+    # raw PII should not be in output
+    assert "john@example.com" not in result_text
+    assert "jane@example.com" not in result_text
+    assert "5551234" not in result_text
+    assert "5555678" not in result_text
+
+    # parse CSV and check obfuscated token format (hex, length 16)
+    out.seek(0)
+    reader = csv.DictReader(io.StringIO(result_text))
+    rows = list(reader)
+    assert len(rows) == 2
+
+    hex_chars = set(string.hexdigits.lower())
+    for row in rows:
+        # email and phone should be replaced with 16-hex chars
+        email_token = row.get("email", "")
+        phone_token = row.get("phone", "")
+        assert len(email_token) == 16
+        assert all(ch in hex_chars for ch in email_token.lower())
+        assert len(phone_token) == 16
+        assert all(ch in hex_chars for ch in phone_token.lower())
+
+    # tokens for different primary keys should be different (basic check)
+    assert rows[0]["email"] != rows[1]["email"]
+    assert rows[0]["phone"] != rows[1]["phone"]
 
 
 def test_csv_obfuscation_handles_missing_field(monkeypatch):

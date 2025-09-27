@@ -64,3 +64,4 @@ def obfuscate_csv_stream(
             # produce obfuscated value; keep same length as short hex
             row[f] = obfuscate_value(key, pk, f)
         writer.writerow(row)
+
