@@ -16,6 +16,12 @@ Short flow (one line)
 * `src/gdpr_obfuscator/obfuscator.py`
   Core logic. It reads CSV row by row and replaces values in the columns you mark as sensitive. It uses a secret key and HMAC-SHA256 to make tokens. This file does not talk to S3.
 
+* `src/gdpr_obfuscator/s3_adapter.py`
+  S3 helper. It downloads a CSV from `s3://bucket/key`, calls `obfuscator` to process it, and returns the obfuscated content as `bytes`. The bytes are ready for `boto3.put_object(Body=...)`.
+
+* `src/gdpr_obfuscator/handler.py`
+  Small wrapper for integration (Lambda / Step Functions). It accepts a JSON string (with `s3_uri`, `fields`, `primary_key`) and calls the S3 adapter. It returns a small dict with `bytes` and `length`. Use this in serverless functions.
+
 * `src/gdpr_obfuscator/cli.py`
   Local CLI. Use this to test on your laptop. It reads local input file and writes local output file. Useful for development.
 
