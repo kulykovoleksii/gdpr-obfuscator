@@ -1,7 +1,13 @@
+.vscode/
+
 .env
 .venv
 
-.vscode/
+# build / packaging artifacts
+*.egg-info/
+dist/
+build/
+.eggs/
 
 /tests/__pycache__/
 /tests/.pytest_cache/
