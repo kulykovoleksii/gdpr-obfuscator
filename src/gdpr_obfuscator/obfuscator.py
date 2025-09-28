@@ -50,6 +50,9 @@ def obfuscate_csv_stream(
         key = _get_key()
 
     reader = csv.DictReader(input_stream, dialect=csv_dialect)
+    if not reader.fieldnames:
+        raise ValueError("CSV input has no header row")
+    
     writer = csv.DictWriter(
         output_stream, fieldnames=reader.fieldnames, dialect=csv_dialect
     )
