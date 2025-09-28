@@ -7,3 +7,5 @@
 /tests/.pytest_cache/
 /src/gdpr_obfuscator/__pycache__/
 .DS_Store
+.pytest_cache
+*.csv

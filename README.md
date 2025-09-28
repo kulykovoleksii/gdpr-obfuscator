@@ -71,11 +71,17 @@ python -c "import secrets; print(secrets.token_hex(32))"
 export OBFUSCATOR_KEY="paste_this_value_here"
 ```
 
-## Run local (simple)
+Install package in editable mode
+```bash
+pip install -e .
+```
+
+## Run CLI (local)
 
 Use CLI to process local CSV:
 
 ```bash
+export OBFUSCATOR_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python -m gdpr_obfuscator.cli --input data.csv --output data.obf.csv --fields email,phone --pk id
 ```
 
