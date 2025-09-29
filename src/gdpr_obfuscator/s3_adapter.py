@@ -14,7 +14,11 @@ def parse_s3_uri(uri: str):
 def process_s3_csv_to_bytes(s3_uri: str, sensitive_fields: List[str], primary_key_field: str = "id") -> bytes:
     bucket, key = parse_s3_uri(s3_uri)
     resp = s3.get_object(Bucket=bucket, Key=key)
-    text = resp["Body"].read().decode("utf-8")
+    try:
+        raw = resp["Body"].read()
+    except Exception as e:
+       raise RuntimeError("Failed to read S3 object body") from e
+    text = raw.decode("utf-8")
     in_stream = StringIO(text)
     out_stream = StringIO()
     obfuscate_csv_stream(in_stream, out_stream, sensitive_fields, primary_key_field)
