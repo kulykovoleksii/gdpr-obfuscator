@@ -82,7 +82,7 @@ Use CLI to process local CSV:
 
 ```bash
 export OBFUSCATOR_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
-python -m gdpr_obfuscator.cli --input data.csv --output data.obf.csv --fields email,phone --pk id
+python -m gdpr_obfuscator.cli --input data.csv --output data.obf.csv --fields email,phone --pk id --mask
 ```
 
 * `--fields` is comma list of columns to obfuscate.

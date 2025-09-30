@@ -10,6 +10,7 @@ def main(argv=None):
     p.add_argument("--output", required=True)
     p.add_argument("--fields", required=True)  # comma separated
     p.add_argument("--pk", default="id")
+    p.add_argument("--mask", action="store_true", help="Use fixed mask '***' instead of tokens")
     
     args = p.parse_args(argv)
     key = os.getenv("OBFUSCATOR_KEY")
@@ -21,5 +22,11 @@ def main(argv=None):
     logger.info("Run CLI: input=%s output=%s fields=%s pk=%s",
                 args.input, args.output, sensitive, args.pk)
     
+    mode = "mask" if args.mask else "token"
+    
     with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8", newline="") as fout:
-        obfuscate_csv_stream(fin, fout, sensitive, primary_key_field=args.pk, key=key.encode("utf-8"))
+        obfuscate_csv_stream(fin, fout, sensitive, primary_key_field=args.pk, key=key.encode("utf-8"), mode=mode, mask_token="***")
+
+
+if __name__ == "__main__":
+    main()

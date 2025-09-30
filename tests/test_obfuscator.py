@@ -75,3 +75,14 @@ def test_csv_obfuscation_handles_missing_field(monkeypatch):
     result = out.read()
     assert "John" in result
     assert "Jane" in result
+
+
+def test_mask_mode_applies(monkeypatch):
+    monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
+    inp = io.StringIO("id,email\n1,a@x.com\n")
+    out = io.StringIO()
+    obfuscate_csv_stream(inp, out, sensitive_fields=["email"], primary_key_field="id", key=b"testkey", mode="mask", mask_token="***")
+    out.seek(0)
+    txt = out.read()
+    assert "***" in txt
+    assert "a@x.com" not in txt

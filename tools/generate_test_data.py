@@ -47,4 +47,4 @@ if __name__ == "__main__":
     # small safety default if run accidentally
     import sys
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1000000
-    generate_csv("test_1m.csv", rows=n)
+    generate_csv("data.csv", rows=n)
