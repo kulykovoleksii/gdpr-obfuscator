@@ -12,3 +12,7 @@ mypy>=1.8.0
 
 # Optional security enhancements
 cryptography>=42.0.0
+
+pip-audit>=2.9.0
+bandit>=1.7.5
+safety>=2.0.0
