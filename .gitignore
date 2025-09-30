@@ -1,17 +1,46 @@
+# macOS
+.DS_Store
+
+# IDE / Editor
 .vscode/
 
-.env
-.venv
-
-# build / packaging artifacts
+# Python: Caches, build artifacts, and virtual environments
+__pycache__/
+*/__pycache__/
 *.egg-info/
 dist/
 build/
 .eggs/
 
-/tests/__pycache__/
-/tests/.pytest_cache/
-/src/gdpr_obfuscator/__pycache__/
-.DS_Store
+# Python: Virtual environments
+venv/
+.env/
+
+# Python: Testing and caches
 .pytest_cache
+*/.pytest_cache
+
+# Data / Artifacts
 *.csv
+*.zip
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+
+# Terraform: Variable definitions (Potential secrets)
+*.tfvars
+**/*.tfvars
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Secrets files
+secrets.tfvars
+terraform/secrets.tfvars
+*.secrets.tfvars
+*.secrets.tfvars.json
+secrets/real_secret.json
