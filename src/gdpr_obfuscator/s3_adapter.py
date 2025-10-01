@@ -1,9 +1,15 @@
-from io import StringIO
+"""S3 adapter: download CSV from S3, obfuscate it and upload back to S3."""
+
+from io import BytesIO, TextIOWrapper
 import boto3
-from typing import List
+from typing import List, Optional
+import logging
+
 from .obfuscator import obfuscate_csv_stream
 
+logger = logging.getLogger(__name__)
 s3 = boto3.client("s3")
+
 
 def parse_s3_uri(uri: str):
     assert uri.startswith("s3://"), "s3 uri must start with s3://"
@@ -11,16 +17,62 @@ def parse_s3_uri(uri: str):
     bucket, _, key = without.partition("/")
     return bucket, key
 
-def process_s3_csv_to_bytes(s3_uri: str, sensitive_fields: List[str], primary_key_field: str = "id") -> bytes:
+
+def process_s3_csv_to_bytes(
+    s3_uri: str,
+    sensitive_fields: List[str],
+    primary_key_field: str = "id",
+    s3_client: Optional[object] = None,
+) -> bytes:
+    """
+    Download CSV from s3_uri, obfuscate it and return bytes suitable for put_object.
+    This streams the object using a TextIOWrapper so we avoid building a large string.
+    """
+    client = s3_client or s3
     bucket, key = parse_s3_uri(s3_uri)
-    resp = s3.get_object(Bucket=bucket, Key=key)
-    try:
-        raw = resp["Body"].read()
-    except Exception as e:
-       raise RuntimeError("Failed to read S3 object body") from e
-    text = raw.decode("utf-8")
-    in_stream = StringIO(text)
-    out_stream = StringIO()
-    obfuscate_csv_stream(in_stream, out_stream, sensitive_fields, primary_key_field)
-    out_stream.seek(0)
-    return out_stream.getvalue().encode("utf-8")
+    logger.info("Downloading s3://%s/%s", bucket, key)
+    resp = client.get_object(Bucket=bucket, Key=key)
+    body = resp["Body"]  # StreamingBody
+
+    # Wrap streaming body with text wrapper so csv.DictReader can read it as text
+    text_stream = TextIOWrapper(body, encoding="utf-8")
+
+    out_bytes = BytesIO()
+    # TextIOWrapper for output will be handled by obfuscate_csv_stream writing text,
+    # so create a text wrapper that writes to BytesIO
+    with TextIOWrapper(out_bytes, encoding="utf-8", write_through=True) as out_text:
+        obfuscate_csv_stream(
+            input_stream=text_stream,
+            output_stream=out_text,
+            sensitive_fields=sensitive_fields,
+            primary_key_field=primary_key_field,
+        )
+
+    # ensure BytesIO cursor at start and get value
+    out_bytes.seek(0)
+    result = out_bytes.read()
+    logger.info("Obfuscation complete, output size=%d bytes", len(result))
+    return result
+
+
+def process_and_upload(
+    source_s3_uri: str,
+    target_s3_uri: str,
+    sensitive_fields: List[str],
+    primary_key_field: str = "id",
+    s3_client: Optional[object] = None,
+) -> None:
+    """
+    Convenience: process source S3 CSV and upload obfuscated bytes to target S3 URI.
+    """
+    client = s3_client or s3
+    bucket_t, key_t = parse_s3_uri(target_s3_uri)
+    logger.info("Processing %s -> %s", source_s3_uri, target_s3_uri)
+    data_bytes = process_s3_csv_to_bytes(
+        s3_uri=source_s3_uri,
+        sensitive_fields=sensitive_fields,
+        primary_key_field=primary_key_field,
+        s3_client=client,
+    )
+    client.put_object(Bucket=bucket_t, Key=key_t, Body=data_bytes)
+    logger.info("Uploaded obfuscated file to s3://%s/%s", bucket_t, key_t)
