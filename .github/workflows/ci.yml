@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements-runtime.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install dev dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      # CSV-only MVP: keep runtime requirements empty; this step is safe if it's not.
+      - name: Install runtime dependencies (if any)
+        run: |
+          if [ -s requirements-runtime.txt ]; then
+            python -m pip install -r requirements-runtime.txt
+          fi
+
+      - name: Lint (flake8)
+        run: flake8 src tests
+
+      - name: Type-check (mypy)
+        run: mypy src
+
+      - name: Tests (pytest + coverage)
+        run: pytest -q --cov=gdpr_obfuscator --cov-report=term-missing
+
+      - name: Security scan (bandit)
+        run: bandit -r src -q
+
+      - name: Dependency vulnerabilities (pip-audit)
+        run: pip-audit --format=plain
+
+      - name: Build lambda package and check size
+        env:
+          PYTHONPATH: src
+        run: |
+          chmod +x ./scripts/build_lambda.sh
+          ./scripts/build_lambda.sh
+
+      - name: Upload function.zip artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-zip
+          path: function.zip
