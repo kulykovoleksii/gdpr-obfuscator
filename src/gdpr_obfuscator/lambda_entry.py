@@ -71,11 +71,13 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     pk = payload.get("primary_key", "id")
     target = payload.get("target_s3_uri")  # optional
 
-    # choose path: do process+upload if target given; otherwise just process and return length
+    # choose path: do process+upload if target given;
+    # otherwise just process and return length
     try:
         if target:
             logger.info("Processing and uploading: %s -> %s", s3_uri, target)
-            # in tests you can pass a stub s3_client via payload or env, here we use real boto3 client
+            # in tests you can pass a stub s3_client via payload or env,
+            # here we use real boto3 client
             s3_adapter.process_and_upload(
                 source_s3_uri=s3_uri,
                 target_s3_uri=target,

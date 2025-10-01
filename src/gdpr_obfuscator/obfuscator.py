@@ -71,12 +71,8 @@ def obfuscate_csv_stream(
         raise ValueError("CSV input has no header row")
     fieldnames = reader.fieldnames
     if not fieldnames:
-        raise ValueError(
-            "CSV input has no header row (DictReader returned None)"
-        )
-    writer = csv.DictWriter(
-        output_stream, fieldnames=fieldnames, dialect=csv_dialect
-    )
+        raise ValueError("CSV input has no header row (DictReader returned None)")
+    writer = csv.DictWriter(output_stream, fieldnames=fieldnames, dialect=csv_dialect)
     writer.writeheader()
 
     count = 0
