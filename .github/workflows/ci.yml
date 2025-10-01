@@ -39,6 +39,8 @@ jobs:
         run: flake8 src tests
 
       - name: Type-check (mypy)
+        env:
+          PYTHONPATH: src
         run: mypy src
 
       - name: Tests (pytest + coverage)
