@@ -14,7 +14,7 @@ build/
 
 # Python: Virtual environments
 venv/
-.env/
+.env
 
 # Python: Testing and caches
 .pytest_cache
