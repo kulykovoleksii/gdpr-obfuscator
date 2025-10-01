@@ -5,7 +5,8 @@ rm -rf package function.zip
 mkdir -p package
 
 # install dependencies into package
-python -m pip install -r requirements.txt -t package/
+# requirements-runtime.txt is expected to be minimal or empty for MVP
+python -m pip install -r requirements-runtime.txt -t package/
 
 # copy source
 cp -r src/gdpr_obfuscator package/
