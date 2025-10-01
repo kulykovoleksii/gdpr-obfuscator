@@ -1,7 +1,4 @@
 import json
-import importlib
-
-import pytest
 
 from gdpr_obfuscator import handler
 import gdpr_obfuscator.s3_adapter as s3_adapter_mod

@@ -39,7 +39,7 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
         "s3_uri": "s3://bucket/input.csv",
         "fields": ["email","phone"],
         "primary_key": "id",
-        "target_s3_uri": "s3://bucket/output.obf.csv"   # optional
+        "target_s3_uri": "s3://bucket/output.obf.csv"    # optional
       }
     """
     logger.info("Lambda invoked")
@@ -84,9 +84,7 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
             )
             return {"status": "ok", "uploaded": True, "target": target}
         else:
-            logger.info(
-                "Processing and returning bytes for %s (no upload)", s3_uri
-            )
+            logger.info("Processing and returning bytes for %s (no upload)", s3_uri)
             # use process_s3_csv_to_bytes which returns bytes
             result_bytes = s3_adapter.process_s3_csv_to_bytes(
                 s3_uri, sensitive_fields=fields, primary_key_field=pk
@@ -95,4 +93,3 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     except Exception:
         logger.exception("Processing failed for %s", s3_uri)
         return {"status": "error", "message": "processing failed"}
-    

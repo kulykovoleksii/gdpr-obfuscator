@@ -1,5 +1,4 @@
 import io
-import pytest
 import csv
 import string
 from gdpr_obfuscator.obfuscator import obfuscate_value, obfuscate_csv_stream
