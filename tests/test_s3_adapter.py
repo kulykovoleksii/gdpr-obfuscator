@@ -6,7 +6,11 @@ import pytest
 # import the function and the client from your module
 from gdpr_obfuscator import s3_adapter
 
-SAMPLE_CSV = "id,full_name,email,phone\n1,Alice,alice@example.com,111\n2,Bob,bob@example.com,222\n"
+SAMPLE_CSV = (
+    "id,full_name,email,phone\n"
+    "1,Alice,alice@example.com,111\n"
+    "2,Bob,bob@example.com,222\n"
+)
 
 
 def test_process_s3_csv_to_bytes(monkeypatch):
