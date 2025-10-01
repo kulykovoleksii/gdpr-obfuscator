@@ -1,7 +1,5 @@
 import io
 from botocore.stub import Stubber
-import boto3
-import pytest
 
 # import the function and the client from your module
 from gdpr_obfuscator import s3_adapter
