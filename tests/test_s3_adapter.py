@@ -8,6 +8,7 @@ from gdpr_obfuscator import s3_adapter
 
 SAMPLE_CSV = "id,full_name,email,phone\n1,Alice,alice@example.com,111\n2,Bob,bob@example.com,222\n"
 
+
 def test_process_s3_csv_to_bytes(monkeypatch):
     # give env key for obfuscator
     monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
