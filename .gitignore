@@ -47,3 +47,4 @@ secrets/real_secret.json
 
 # Python Code Coverage
 htmlcov/
+.coverage
