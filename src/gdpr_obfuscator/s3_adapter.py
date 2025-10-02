@@ -12,7 +12,8 @@ s3 = boto3.client("s3")
 
 
 def parse_s3_uri(uri: str) -> tuple[str, str]:
-    assert uri.startswith("s3://"), "s3 uri must start with s3://"
+    if not uri.startswith("s3://"):
+        raise ValueError("S3 URI must start with s3://")
     without = uri[5:]
     bucket, _, key = without.partition("/")
     return bucket, key

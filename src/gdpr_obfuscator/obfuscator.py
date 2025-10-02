@@ -26,7 +26,7 @@ def obfuscate_value(
     field_name: str,
     length: int = 16,
     mode: str = "token",
-    mask_token: str = "***",
+    mask_token: str = "***",  # nosec B107
 ) -> str:
     """
     Return obfuscated representation for a single field.
@@ -54,7 +54,7 @@ def obfuscate_csv_stream(
     key: bytes | None = None,
     csv_dialect: str = "excel",
     mode: str = "token",
-    mask_token: str = "***",
+    mask_token: str = "***",  # nosec B107
     token_length: int = 16,
 ) -> None:
     """

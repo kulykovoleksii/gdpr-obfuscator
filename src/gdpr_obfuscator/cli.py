@@ -49,7 +49,7 @@ def main(argv=None):
             primary_key_field=args.pk,
             key=key.encode("utf-8"),
             mode=mode,
-            mask_token="***",
+            mask_token="***",  # nosec B106
         )
 
 
