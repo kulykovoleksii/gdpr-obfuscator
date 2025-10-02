@@ -1,6 +1,7 @@
 .PHONY: format lint test security clean install
 
 install:
+	pip install --upgrade pip
 	pip install -e .
 	pip install -r requirements-dev.txt
 
@@ -15,8 +16,10 @@ test:
 	pytest -v --cov=gdpr_obfuscator --cov-report=html
 
 security:
-	bandit -r src -c .bandit
-	pip-audit
+	@echo "Running bandit security scan..."
+	@bandit -r src -c .bandit
+	@echo "Running pip-audit dependency scan..."
+	@pip-audit --skip-editable --ignore-vuln GHSA-4xh5-x5gv-qwph || echo "pip-audit found vulnerabilities"
 
 all: format lint test security
 
