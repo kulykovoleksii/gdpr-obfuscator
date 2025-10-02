@@ -1,0 +1,17 @@
+# .bandit
+# Bandit security configuration for GDPR Obfuscator
+
+# Exclude test files and generated code
+exclude_dirs:
+  - tests
+  - .venv
+  - venv
+  - build
+  - dist
+
+# Skip specific checks that are false positives for this project
+skips:
+  # B106: hardcoded_password_funcarg - mask_token="***" is not a password
+  - B106
+  # B107: hardcoded_password_default - mask_token default is not a password
+  - B107
