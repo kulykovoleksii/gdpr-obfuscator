@@ -44,3 +44,6 @@ terraform/secrets.tfvars
 *.secrets.tfvars
 *.secrets.tfvars.json
 secrets/real_secret.json
+
+# Python Code Coverage
+htmlcov/
