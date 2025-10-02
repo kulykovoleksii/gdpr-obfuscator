@@ -15,8 +15,8 @@ def get_secret_string(secret_name: Optional[str]) -> Optional[str]:
         return None
     client = boto3.client("secretsmanager")
     resp = client.get_secret_value(SecretId=secret_name)
-    secret_value: str = resp.get("SecretString", "")
-    return secret_value if secret_value else None
+    secret_value: Optional[str] = resp.get("SecretString")  # type: ignore[assignment]
+    return secret_value
 
 
 def safe_parse_payload(event: Any) -> Dict[str, Any]:
@@ -25,10 +25,10 @@ def safe_parse_payload(event: Any) -> Dict[str, Any]:
         try:
             parsed: Dict[str, Any] = json.loads(event)
             return parsed
-        except json.JSONDecodeError:
-            raise ValueError("Event is string but not valid JSON")
+        except json.JSONDecodeError as e:
+            raise ValueError("Event is string but not valid JSON") from e
     if isinstance(event, dict):
-        return event
+        return event  # type: ignore[return-value]
     raise ValueError("Unsupported event type")
 
 

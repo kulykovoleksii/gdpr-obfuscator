@@ -33,10 +33,11 @@ def process_s3_csv_to_bytes(
     client = s3_client or s3
     bucket, key = parse_s3_uri(s3_uri)
     logger.info("Downloading s3://%s/%s", bucket, key)
-    resp = client.get_object(Bucket=bucket, Key=key)
+    resp = client.get_object(Bucket=bucket, Key=key)  # type: ignore[union-attr]
     body = resp["Body"]  # StreamingBody
 
-    text_stream = TextIOWrapper(body, encoding="utf-8")
+    # boto3 StreamingBody is compatible with TextIOWrapper
+    text_stream = TextIOWrapper(body, encoding="utf-8")  # type: ignore[arg-type]
 
     out_bytes = BytesIO()
     with TextIOWrapper(out_bytes, encoding="utf-8", write_through=True) as out_text:
@@ -74,5 +75,7 @@ def process_and_upload(
         primary_key_field=primary_key_field,
         s3_client=client,
     )
-    client.put_object(Bucket=bucket_t, Key=key_t, Body=data_bytes)
+    client.put_object(  # type: ignore[union-attr]
+        Bucket=bucket_t, Key=key_t, Body=data_bytes
+    )
     logger.info("Uploaded obfuscated file to s3://%s/%s", bucket_t, key_t)
