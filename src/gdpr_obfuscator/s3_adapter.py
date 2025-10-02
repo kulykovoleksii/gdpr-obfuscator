@@ -37,7 +37,7 @@ def process_s3_csv_to_bytes(
     body = resp["Body"]  # StreamingBody
 
     # boto3 StreamingBody is compatible with TextIOWrapper
-    text_stream = TextIOWrapper(body, encoding="utf-8")  # type: ignore[arg-type]
+    text_stream = TextIOWrapper(body, encoding="utf-8")  # type: ignore[type-var]
 
     out_bytes = BytesIO()
     with TextIOWrapper(out_bytes, encoding="utf-8", write_through=True) as out_text:
