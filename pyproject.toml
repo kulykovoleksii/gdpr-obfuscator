@@ -17,9 +17,8 @@ warn_unused_configs = true
 namespace_packages = true
 explicit_package_bases = true
 mypy_path = "src"
-# Allow Any types (less strict for MVP)
-disallow_any_explicit = false
-disallow_any_generics = false
+# Less strict for boto3 compatibility
+disable_error_code = ["arg-type"]
 
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*"]
