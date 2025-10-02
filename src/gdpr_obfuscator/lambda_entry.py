@@ -15,14 +15,16 @@ def get_secret_string(secret_name: Optional[str]) -> Optional[str]:
         return None
     client = boto3.client("secretsmanager")
     resp = client.get_secret_value(SecretId=secret_name)
-    return resp.get("SecretString")
+    secret_value: str = resp.get("SecretString", "")
+    return secret_value if secret_value else None
 
 
 def safe_parse_payload(event: Any) -> Dict[str, Any]:
     """Return dict payload. Accept dict or JSON string."""
     if isinstance(event, str):
         try:
-            return json.loads(event)
+            parsed: Dict[str, Any] = json.loads(event)
+            return parsed
         except json.JSONDecodeError:
             raise ValueError("Event is string but not valid JSON")
     if isinstance(event, dict):

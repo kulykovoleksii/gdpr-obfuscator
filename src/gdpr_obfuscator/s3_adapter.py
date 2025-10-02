@@ -2,7 +2,7 @@
 
 from io import BytesIO, TextIOWrapper
 import boto3
-from typing import List, Optional
+from typing import List, Optional, Any
 import logging
 
 from .obfuscator import obfuscate_csv_stream
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 s3 = boto3.client("s3")
 
 
-def parse_s3_uri(uri: str):
+def parse_s3_uri(uri: str) -> tuple[str, str]:
     assert uri.startswith("s3://"), "s3 uri must start with s3://"
     without = uri[5:]
     bucket, _, key = without.partition("/")
@@ -22,7 +22,7 @@ def process_s3_csv_to_bytes(
     s3_uri: str,
     sensitive_fields: List[str],
     primary_key_field: str = "id",
-    s3_client: Optional[object] = None,
+    s3_client: Optional[Any] = None,
 ) -> bytes:
     """
     Download CSV from s3_uri,
@@ -59,7 +59,7 @@ def process_and_upload(
     target_s3_uri: str,
     sensitive_fields: List[str],
     primary_key_field: str = "id",
-    s3_client: Optional[object] = None,
+    s3_client: Optional[Any] = None,
 ) -> None:
     """
     Convenience: process source S3 CSV
