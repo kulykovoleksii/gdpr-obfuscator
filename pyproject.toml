@@ -23,3 +23,6 @@ disable_error_code = ["arg-type"]
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*"]
 ignore_missing_imports = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
