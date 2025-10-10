@@ -1,0 +1,7 @@
+region               = "eu-west-2"
+name                 = "gdpr-obfuscator"
+input_bucket_name    = "my-input-bucket-123"
+output_bucket_name   = "my-output-bucket-123"
+artifacts_bucket_name= "my-artifacts-123"
+secret_name          = ""
+lambda_zip_key       = "releases/function.zip"

@@ -12,6 +12,8 @@ dist/
 build/
 .eggs/
 
+package/*
+
 # Python: Virtual environments
 venv/
 .env
