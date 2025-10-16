@@ -37,10 +37,16 @@ This tool creates a copy of CSV files and replaces personal data with safe, dete
 2. For each row, replace sensitive columns with HMAC token
 3. Save result as bytes (ready for S3 upload) or to local file
 
-**Example:**
+**Example (Token mode - default):**
 ```
 Input:  id=1, email=alice@example.com, phone=555-1234
 Output: id=1, email=a3f2e1d4c5b6a789, phone=b6a7891c2d3e4f50
+```
+
+**Example (Mask mode):**
+```
+Input:  id=1, email=alice@example.com, phone=555-1234
+Output: id=1, email=***, phone=***
 ```
 
 ---
@@ -74,20 +80,29 @@ echo $OBFUSCATOR_KEY
 ### 3. Run CLI (Local Testing)
 
 ```bash
-# Basic usage (CSV)
+# Token mode (default) - deterministic HMAC tokens
 python -m gdpr_obfuscator.cli \
   --input data.csv \
   --output data.obf.csv \
   --fields email,phone \
   --pk id
 
-# With mask mode (fixed '***' instead of tokens)
+# Mask mode - fixed string (***) for all values
 python -m gdpr_obfuscator.cli \
   --input data.csv \
-  --output data.obf.csv \
+  --output data.masked.csv \
   --fields email,phone \
   --pk id \
   --mask
+
+# Custom mask token
+python -m gdpr_obfuscator.cli \
+  --input data.csv \
+  --output data.masked.csv \
+  --fields email,phone \
+  --pk id \
+  --mask \
+  --mask-token "REDACTED"
 ```
 
 **CLI Arguments:**
@@ -96,9 +111,9 @@ python -m gdpr_obfuscator.cli \
 - `--fields`: Comma-separated list of sensitive fields (required)
 - `--pk`: Primary key field name (default: `id`)
 - `--format`: File format - `csv`, `json`, `jsonl`, `parquet` (default: auto-detect)
-- `--mask`: Use fixed mask `***` instead of deterministic tokens
+- `--mask`: Use fixed mask instead of deterministic tokens
 - `--mask-token`: Custom mask string (default: `***`)
-- `--token-length`: Length of hex tokens (default: 16)
+- `--token-length`: Length of hex tokens in token mode (default: 16)
 
 ---
 
@@ -113,7 +128,7 @@ id,full_name,email,phone
 2,Bob Jones,bob@example.com,555-5678
 ```
 
-**Command:**
+**Command (Token mode - default):**
 ```bash
 python -m gdpr_obfuscator.cli \
   --input data.csv \
@@ -126,6 +141,22 @@ python -m gdpr_obfuscator.cli \
 id,full_name,email,phone
 1,Alice Smith,a3f2e1d4c5b6a789,b6a7891c2d3e4f50
 2,Bob Jones,c5d6e7f8a9b0c1d2,d3e4f5a6b7c8d9e0
+```
+
+**Command (Mask mode):**
+```bash
+python -m gdpr_obfuscator.cli \
+  --input data.csv \
+  --output data.masked.csv \
+  --fields email,phone \
+  --mask
+```
+
+**Output Example** (`data.masked.csv`):
+```csv
+id,full_name,email,phone
+1,Alice Smith,***,***
+2,Bob Jones,***,***
 ```
 
 ### JSON Format (🔄 Planned)
@@ -343,7 +374,7 @@ terraform apply
 
 ### Lambda Invocation
 
-**Event format:**
+**Event format (Token mode - default):**
 ```json
 {
   "s3_uri": "s3://input-bucket/data.csv",
@@ -353,6 +384,37 @@ terraform apply
 }
 ```
 
+**Event format (Mask mode):**
+```json
+{
+  "s3_uri": "s3://input-bucket/data.csv",
+  "fields": ["email", "phone", "ssn"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://output-bucket/data.masked.csv",
+  "mode": "mask"
+}
+```
+
+**Event format (Custom mask token):**
+```json
+{
+  "s3_uri": "s3://input-bucket/data.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://output-bucket/data.redacted.csv",
+  "mode": "mask",
+  "mask_token": "REDACTED"
+}
+```
+
+**Event Parameters:**
+- `s3_uri` (required): Source file S3 URI
+- `fields` (required): Array of sensitive field names
+- `primary_key` (optional): Primary key field, default: `"id"`
+- `target_s3_uri` (optional): Destination S3 URI for output
+- `mode` (optional): `"token"` (default) or `"mask"`
+- `mask_token` (optional): Custom mask string, default: `"***"`
+
 **Response:**
 ```json
 {
@@ -360,6 +422,44 @@ terraform apply
   "uploaded": true,
   "target": "s3://output-bucket/data.obf.csv"
 }
+```
+
+**Testing Lambda locally:**
+```bash
+# Token mode (default)
+cat > test-event-token.json << 'EOF'
+{
+  "s3_uri": "s3://input-bucket/data.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://output-bucket/data.obf.csv"
+}
+EOF
+
+aws lambda invoke \
+  --function-name gdpr-obfuscator \
+  --payload file://test-event-token.json \
+  --cli-binary-format raw-in-base64-out \
+  --region eu-west-2 \
+  response.json
+
+# Mask mode
+cat > test-event-mask.json << 'EOF'
+{
+  "s3_uri": "s3://input-bucket/data.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://output-bucket/data.masked.csv",
+  "mode": "mask"
+}
+EOF
+
+aws lambda invoke \
+  --function-name gdpr-obfuscator \
+  --payload file://test-event-mask.json \
+  --cli-binary-format raw-in-base64-out \
+  --region eu-west-2 \
+  response.json
 ```
 
 ---
@@ -435,7 +535,7 @@ import os
 # Set secret key
 os.environ['OBFUSCATOR_KEY'] = 'your-secret-key'
 
-# Process S3 CSV and upload result
+# Token mode (default) - Process S3 CSV and upload result
 s3_adapter.process_and_upload(
     source_s3_uri='s3://input-bucket/data.csv',
     target_s3_uri='s3://output-bucket/data.obf.csv',
@@ -443,11 +543,31 @@ s3_adapter.process_and_upload(
     primary_key_field='user_id'
 )
 
+# Mask mode - Replace with fixed string
+s3_adapter.process_and_upload(
+    source_s3_uri='s3://input-bucket/data.csv',
+    target_s3_uri='s3://output-bucket/data.masked.csv',
+    sensitive_fields=['email', 'phone'],
+    primary_key_field='user_id',
+    mode='mask'
+)
+
+# Custom mask token
+s3_adapter.process_and_upload(
+    source_s3_uri='s3://input-bucket/data.csv',
+    target_s3_uri='s3://output-bucket/data.redacted.csv',
+    sensitive_fields=['email', 'phone'],
+    primary_key_field='user_id',
+    mode='mask',
+    mask_token='REDACTED'
+)
+
 # Or get bytes without uploading
 result_bytes = s3_adapter.process_s3_file_to_bytes(
     s3_uri='s3://bucket/data.csv',
     sensitive_fields=['email'],
-    primary_key_field='id'
+    primary_key_field='id',
+    mode='token'  # or 'mask'
 )
 ```
 
@@ -459,6 +579,7 @@ import os
 
 os.environ['OBFUSCATOR_KEY'] = 'your-secret-key'
 
+# Token mode (default)
 with open('input.csv', 'rb') as fin, open('output.csv', 'wb') as fout:
     obfuscate_stream(
         input_stream=fin,
@@ -466,6 +587,29 @@ with open('input.csv', 'rb') as fin, open('output.csv', 'wb') as fout:
         sensitive_fields=['email', 'phone'],
         file_format='csv',
         primary_key_field='id'
+    )
+
+# Mask mode
+with open('input.csv', 'rb') as fin, open('masked.csv', 'wb') as fout:
+    obfuscate_stream(
+        input_stream=fin,
+        output_stream=fout,
+        sensitive_fields=['email', 'phone'],
+        file_format='csv',
+        primary_key_field='id',
+        mode='mask'
+    )
+
+# Custom mask token
+with open('input.csv', 'rb') as fin, open('redacted.csv', 'wb') as fout:
+    obfuscate_stream(
+        input_stream=fin,
+        output_stream=fout,
+        sensitive_fields=['email', 'phone'],
+        file_format='csv',
+        primary_key_field='id',
+        mode='mask',
+        mask_token='REDACTED'
     )
 ```
 
@@ -497,14 +641,78 @@ export OBFUSCATOR_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))
 ### Obfuscation Modes
 
 **Token mode (default):**
-- Deterministic HMAC-SHA256 tokens
-- Same input → same token (allows joins)
-- 16-character hex string
+- **What it does**: Generates deterministic HMAC-SHA256 tokens
+- **Properties**: Same input → same token (allows joins across datasets)
+- **Format**: 16-character hex string (e.g., `a3f2e1d4c5b6a789`)
+- **Use case**: When you need to join obfuscated datasets or track records across files
+- **Example**:
+  ```
+  alice@example.com → a3f2e1d4c5b6a789
+  bob@example.com   → c5d6e7f8a9b0c1d2
+  alice@example.com → a3f2e1d4c5b6a789  (same token!)
+  ```
 
 **Mask mode:**
-- Fixed string (e.g., `***`)
-- Use when joins not needed
-- Simpler but loses deterministic property
+- **What it does**: Replaces all values with a fixed string
+- **Properties**: No determinism, cannot reverse or join
+- **Format**: Fixed string (default: `***`, customizable)
+- **Use case**: Maximum privacy when joins are not needed
+- **Example**:
+  ```
+  alice@example.com → ***
+  bob@example.com   → ***
+  alice@example.com → ***
+  ```
+
+**When to use each mode:**
+- **Use Token mode** if you need to:
+  - Join obfuscated data across multiple files
+  - Track the same user/entity across datasets
+  - Maintain referential integrity
+
+- **Use Mask mode** if you need to:
+  - Completely hide the data
+  - Don't need to join or track entities
+  - Want maximum simplicity
+
+**CLI Examples:**
+```bash
+# Token mode (default)
+python -m gdpr_obfuscator.cli --input data.csv --output data.obf.csv --fields email,phone
+
+# Mask mode with default '***'
+python -m gdpr_obfuscator.cli --input data.csv --output data.masked.csv --fields email,phone --mask
+
+# Mask mode with custom token
+python -m gdpr_obfuscator.cli --input data.csv --output data.redacted.csv --fields email,phone --mask --mask-token "REDACTED"
+```
+
+**Lambda Examples:**
+```json
+// Token mode (default)
+{
+  "s3_uri": "s3://bucket/data.csv",
+  "fields": ["email", "phone"],
+  "target_s3_uri": "s3://bucket/data.obf.csv"
+}
+
+// Mask mode
+{
+  "s3_uri": "s3://bucket/data.csv",
+  "fields": ["email", "phone"],
+  "target_s3_uri": "s3://bucket/data.masked.csv",
+  "mode": "mask"
+}
+
+// Custom mask
+{
+  "s3_uri": "s3://bucket/data.csv",
+  "fields": ["email", "phone"],
+  "target_s3_uri": "s3://bucket/data.redacted.csv",
+  "mode": "mask",
+  "mask_token": "REDACTED"
+}
+```
 
 ---
 

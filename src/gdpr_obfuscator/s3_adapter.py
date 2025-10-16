@@ -39,6 +39,8 @@ def process_s3_file_to_bytes(
     primary_key_field: str = "id",
     file_format: Optional[str] = None,
     s3_client: Optional[Any] = None,
+    mode: str = "token",
+    mask_token: str = "***",
 ) -> bytes:
     """
     Download file from S3, obfuscate it, and return bytes.
@@ -100,6 +102,8 @@ def process_s3_file_to_bytes(
             sensitive_fields=sensitive_fields,
             file_format=file_format,
             primary_key_field=primary_key_field,
+            mode=mode,
+            mask_token=mask_token,
         )
     except NotImplementedError as e:
         logger.error("Format not yet implemented: %s", file_format)
@@ -127,6 +131,8 @@ def process_and_upload(
     primary_key_field: str = "id",
     file_format: Optional[str] = None,
     s3_client: Optional[Any] = None,
+    mode: str = "token",
+    mask_token: str = "***",
 ) -> None:
     """
     Process S3 file and upload obfuscated result to another S3 location.
@@ -162,6 +168,8 @@ def process_and_upload(
         primary_key_field=primary_key_field,
         file_format=file_format,
         s3_client=client,
+        mode=mode,
+        mask_token=mask_token,
     )
 
     # Upload to target location
@@ -183,6 +191,8 @@ def process_s3_csv_to_bytes(
     sensitive_fields: List[str],
     primary_key_field: str = "id",
     s3_client: Optional[Any] = None,
+    mode: str = "token",
+    mask_token: str = "***",
 ) -> bytes:
     """
     Legacy CSV-specific function for backward compatibility.
@@ -196,4 +206,6 @@ def process_s3_csv_to_bytes(
         primary_key_field=primary_key_field,
         file_format="csv",
         s3_client=s3_client,
+        mode=mode,
+        mask_token=mask_token,
     )

@@ -72,6 +72,8 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
 
     pk = payload.get("primary_key", "id")
     target = payload.get("target_s3_uri")  # optional
+    mode = payload.get("mode", "token")
+    mask_token = payload.get("mask_token", "***")
 
     # choose path: do process+upload if target given;
     # otherwise just process and return length
@@ -85,13 +87,19 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
                 target_s3_uri=target,
                 sensitive_fields=fields,
                 primary_key_field=pk,
+                mode=mode,
+                mask_token=mask_token,
             )
             return {"status": "ok", "uploaded": True, "target": target}
         else:
             logger.info("Processing and returning bytes for %s (no upload)", s3_uri)
             # use process_s3_csv_to_bytes which returns bytes
             result_bytes = s3_adapter.process_s3_csv_to_bytes(
-                s3_uri, sensitive_fields=fields, primary_key_field=pk
+                s3_uri,
+                sensitive_fields=fields,
+                primary_key_field=pk,
+                mode=mode,
+                mask_token=mask_token,
             )
             return {"status": "ok", "uploaded": False, "length": len(result_bytes)}
     except Exception:

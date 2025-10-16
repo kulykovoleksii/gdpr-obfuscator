@@ -50,3 +50,7 @@ secrets/real_secret.json
 # Python Code Coverage
 htmlcov/
 .coverage
+
+test-event-mask.json
+test-event.json
+response.json

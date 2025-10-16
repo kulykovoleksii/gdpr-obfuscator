@@ -219,11 +219,11 @@ aws s3 cp data.csv s3://gdpr-input-YOUR-NAME-12345/test-input.csv
 aws s3 ls s3://gdpr-input-YOUR-NAME-12345/
 ```
 
-### 6.3: Create Lambda Event
+### 6.3: Create Lambda Events
 
-Create `test-event.json`:
+**Token Mode (default)** - Creates deterministic HMAC tokens:
 ```bash
-cat > test-event.json << 'EOF'
+cat > test-event-token.json << 'EOF'
 {
   "s3_uri": "s3://gdpr-input-YOUR-NAME-12345/test-input.csv",
   "fields": ["email", "phone"],
@@ -233,17 +233,58 @@ cat > test-event.json << 'EOF'
 EOF
 ```
 
+**Mask Mode** - Replaces with fixed string:
+```bash
+cat > test-event-mask.json << 'EOF'
+{
+  "s3_uri": "s3://gdpr-input-YOUR-NAME-12345/test-input.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://gdpr-output-YOUR-NAME-12345/test-mask.csv",
+  "mode": "mask"
+}
+EOF
+```
+
+**Custom Mask Token**:
+```bash
+cat > test-event-custom.json << 'EOF'
+{
+  "s3_uri": "s3://gdpr-input-YOUR-NAME-12345/test-input.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://gdpr-output-YOUR-NAME-12345/test-redacted.csv",
+  "mode": "mask",
+  "mask_token": "REDACTED"
+}
+EOF
+```
+
 ⚠️ **Replace bucket names with YOUR actual names!**
 
 ### 6.4: Invoke Lambda
+
+**Test Token Mode:**
 ```bash
 aws lambda invoke \
   --function-name gdpr-obfuscator \
-  --payload file://test-event.json \
+  --payload file://test-event-token.json \
+  --cli-binary-format raw-in-base64-out \
   --region eu-west-2 \
   response.json
 
-# Check response
+cat response.json
+```
+
+**Test Mask Mode:**
+```bash
+aws lambda invoke \
+  --function-name gdpr-obfuscator \
+  --payload file://test-event-mask.json \
+  --cli-binary-format raw-in-base64-out \
+  --region eu-west-2 \
+  response.json
+
 cat response.json
 ```
 
@@ -255,6 +296,8 @@ cat response.json
 ✅ Lambda executed successfully!
 
 ### 6.5: Verify Output
+
+**Check Token Mode output:**
 ```bash
 # Download obfuscated file
 aws s3 cp s3://gdpr-output-YOUR-NAME-12345/test-output.csv output.csv
@@ -263,13 +306,32 @@ aws s3 cp s3://gdpr-output-YOUR-NAME-12345/test-output.csv output.csv
 head -10 output.csv
 ```
 
-**Expected output:**
+**Expected output (Token mode):**
 ```csv
 id,full_name,email,phone,address,age
 1,User1 Test,a3f2e1d4c5b6a789,b6a7891c2d3e4f50,1 Baker St...
+2,User2 Test,c5d6e7f8a9b0c1d2,d3e4f5a6b7c8d9e0,2 Baker St...
 ```
 
-✅ **Email and phone are replaced with hex tokens!**
+✅ **Email and phone are replaced with deterministic hex tokens!**
+
+**Check Mask Mode output:**
+```bash
+# Download masked file
+aws s3 cp s3://gdpr-output-YOUR-NAME-12345/test-mask.csv mask.csv
+
+# Check result
+head -10 mask.csv
+```
+
+**Expected output (Mask mode):**
+```csv
+id,full_name,email,phone,address,age
+1,User1 Test,***,***,1 Baker St...
+2,User2 Test,***,***,2 Baker St...
+```
+
+✅ **Email and phone are replaced with fixed mask!**
 
 ---
 
