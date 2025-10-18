@@ -10,10 +10,13 @@ from typing import List, IO
 logger = logging.getLogger(__name__)
 KEY_ENV = "OBFUSCATOR_KEY"
 
+
 def _get_key() -> bytes:
     key = os.getenv(KEY_ENV)
     if not key:
-        raise RuntimeError(f"Obfuscator key missing. Set {KEY_ENV} environment variable.")
+        raise RuntimeError(
+            f"Obfuscator key missing. Set {KEY_ENV} environment variable."
+        )
     return key.encode("utf-8")
 
 
@@ -68,8 +71,12 @@ def obfuscate_csv_stream(
         raise ValueError("CSV input has no header row")
     fieldnames = reader.fieldnames
     if not fieldnames:
-        raise ValueError("CSV input has no header row (DictReader returned None)")
-    writer = csv.DictWriter(output_stream, fieldnames=fieldnames, dialect=csv_dialect)
+        raise ValueError(
+            "CSV input has no header row (DictReader returned None)"
+        )
+    writer = csv.DictWriter(
+        output_stream, fieldnames=fieldnames, dialect=csv_dialect
+    )
     writer.writeheader()
 
     count = 0

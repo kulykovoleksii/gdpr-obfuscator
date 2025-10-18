@@ -4,11 +4,11 @@ import logging
 from typing import Any, Dict, Optional
 import boto3
 
-from . import handler as gdpr_handler
 from . import s3_adapter
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
+
 
 def get_secret_string(secret_name: Optional[str]) -> Optional[str]:
     if not secret_name:
@@ -16,6 +16,7 @@ def get_secret_string(secret_name: Optional[str]) -> Optional[str]:
     client = boto3.client("secretsmanager")
     resp = client.get_secret_value(SecretId=secret_name)
     return resp.get("SecretString")
+
 
 def safe_parse_payload(event: Any) -> Dict[str, Any]:
     """Return dict payload. Accept dict or JSON string."""
@@ -27,6 +28,7 @@ def safe_parse_payload(event: Any) -> Dict[str, Any]:
     if isinstance(event, dict):
         return event
     raise ValueError("Unsupported event type")
+
 
 def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     """
@@ -48,7 +50,9 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
         if secret:
             os.environ["OBFUSCATOR_KEY"] = secret
     except Exception:
-        logger.exception("Failed to load secret from Secrets Manager; continuing if env var set")
+        logger.exception(
+            "Failed to load secret from Secrets Manager; continuing if env var set"
+        )
 
     try:
         payload = safe_parse_payload(event)
@@ -67,11 +71,6 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     pk = payload.get("primary_key", "id")
     target = payload.get("target_s3_uri")  # optional
 
-    # optional: allow caller to pass token/mask options
-    mode = payload.get("mode", "token")
-    mask_token = payload.get("mask_token", "***")
-    token_length = int(payload.get("token_length", 16))
-
     # choose path: do process+upload if target given; otherwise just process and return length
     try:
         if target:
@@ -85,7 +84,9 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
             )
             return {"status": "ok", "uploaded": True, "target": target}
         else:
-            logger.info("Processing and returning bytes for %s (no upload)", s3_uri)
+            logger.info(
+                "Processing and returning bytes for %s (no upload)", s3_uri
+            )
             # use process_s3_csv_to_bytes which returns bytes
             result_bytes = s3_adapter.process_s3_csv_to_bytes(
                 s3_uri, sensitive_fields=fields, primary_key_field=pk
@@ -94,3 +95,4 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     except Exception:
         logger.exception("Processing failed for %s", s3_uri)
         return {"status": "error", "message": "processing failed"}
+    

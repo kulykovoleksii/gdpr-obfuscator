@@ -25,8 +25,10 @@ def process_s3_csv_to_bytes(
     s3_client: Optional[object] = None,
 ) -> bytes:
     """
-    Download CSV from s3_uri, obfuscate it and return bytes suitable for put_object.
-    This streams the object using a TextIOWrapper so we avoid building a large string.
+    Download CSV from s3_uri,
+    obfuscate it and return bytes suitable for put_object.
+    This streams the object using a TextIOWrapper
+    so we avoid building a large string.
     """
     client = s3_client or s3
     bucket, key = parse_s3_uri(s3_uri)
@@ -34,12 +36,9 @@ def process_s3_csv_to_bytes(
     resp = client.get_object(Bucket=bucket, Key=key)
     body = resp["Body"]  # StreamingBody
 
-    # Wrap streaming body with text wrapper so csv.DictReader can read it as text
     text_stream = TextIOWrapper(body, encoding="utf-8")
 
     out_bytes = BytesIO()
-    # TextIOWrapper for output will be handled by obfuscate_csv_stream writing text,
-    # so create a text wrapper that writes to BytesIO
     with TextIOWrapper(out_bytes, encoding="utf-8", write_through=True) as out_text:
         obfuscate_csv_stream(
             input_stream=text_stream,
@@ -48,9 +47,9 @@ def process_s3_csv_to_bytes(
             primary_key_field=primary_key_field,
         )
 
-    # ensure BytesIO cursor at start and get value
-    out_bytes.seek(0)
-    result = out_bytes.read()
+        out_text.flush()
+        result = out_bytes.getvalue()
+
     logger.info("Obfuscation complete, output size=%d bytes", len(result))
     return result
 
@@ -63,7 +62,8 @@ def process_and_upload(
     s3_client: Optional[object] = None,
 ) -> None:
     """
-    Convenience: process source S3 CSV and upload obfuscated bytes to target S3 URI.
+    Convenience: process source S3 CSV
+    and upload obfuscated bytes to target S3 URI.
     """
     client = s3_client or s3
     bucket_t, key_t = parse_s3_uri(target_s3_uri)

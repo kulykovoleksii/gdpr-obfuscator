@@ -22,7 +22,11 @@ def test_obfuscate_value_changes_with_field():
 
 def test_csv_obfuscation_replaces_sensitive_fields(monkeypatch):
     monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
-    input_csv = "id,full_name,email,phone\n1,John Doe,john@example.com,5551234\n2,Jane Doe,jane@example.com,5555678\n"
+    input_csv = (
+        "id,full_name,email,phone\n"
+        "1,John Doe,john@example.com,5551234\n"
+        "2,Jane Doe,jane@example.com,5555678\n"
+    )
 
     inp = io.StringIO(input_csv)
     out = io.StringIO()
@@ -81,7 +85,15 @@ def test_mask_mode_applies(monkeypatch):
     monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
     inp = io.StringIO("id,email\n1,a@x.com\n")
     out = io.StringIO()
-    obfuscate_csv_stream(inp, out, sensitive_fields=["email"], primary_key_field="id", key=b"testkey", mode="mask", mask_token="***")
+    obfuscate_csv_stream(
+        inp,
+        out,
+        sensitive_fields=["email"],
+        primary_key_field="id",
+        key=b"testkey",
+        mode="mask",
+        mask_token="***",
+    )
     out.seek(0)
     txt = out.read()
     assert "***" in txt
