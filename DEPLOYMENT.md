@@ -118,7 +118,7 @@ aws s3 ls s3://$ARTIFACTS_BUCKET/releases/
 
 ---
 
-## Step 4: Configure Terraform (3 min)
+## Step 4: Configure Terraform
 ```bash
 cd terraform
 
@@ -146,7 +146,7 @@ Save: `Ctrl+O` → `Enter` → `Ctrl+X`
 
 ---
 
-## Step 5: Deploy Infrastructure (5 min)
+## Step 5: Deploy Infrastructure
 
 ### 5.1: Initialize Terraform
 ```bash
@@ -196,7 +196,7 @@ terraform output
 
 ---
 
-## Step 6: Test Deployment (5 min)
+## Step 6: Test Deployment
 
 ### 6.1: Generate Test Data
 ```bash
@@ -370,76 +370,6 @@ aws secretsmanager describe-secret \
 
 ---
 
-## Troubleshooting
-
-### Error: "Bucket name already exists"
-
-**Problem:** S3 bucket names are globally unique across all AWS accounts.
-
-**Solution:**
-```bash
-# Edit terraform.tfvars with MORE unique names:
-input_bucket_name = "gdpr-input-yourname-abc123xyz"
-output_bucket_name = "gdpr-output-yourname-abc123xyz"
-```
-
-Then re-run:
-```bash
-terraform apply
-```
-
-### Error: "AccessDenied" when invoking Lambda
-
-**Problem:** Lambda role lacks S3 permissions.
-
-**Solution:**
-```bash
-# Verify IAM policies attached
-aws iam list-attached-role-policies \
-  --role-name gdpr-obfuscator-lambda-role
-
-# Should show policies for S3, Secrets Manager, etc.
-# If missing, re-run:
-terraform apply
-```
-
-### Error: "Function not found"
-
-**Problem:** function.zip was not uploaded or Lambda creation failed.
-
-**Solution:**
-```bash
-# Check if ZIP exists in S3
-aws s3 ls s3://gdpr-artifacts-YOUR-NAME-12345/releases/
-
-# If missing, re-upload:
-aws s3 cp function.zip s3://gdpr-artifacts-YOUR-NAME-12345/releases/function.zip
-
-# Force Lambda update:
-cd terraform
-terraform apply -replace=aws_lambda_function.gdpr_obfuscator
-```
-
-### Lambda Timeout
-
-**Problem:** Processing large file takes >60 seconds.
-
-**Solution:** Increase timeout in `terraform/main.tf`:
-```hcl
-resource "aws_lambda_function" "gdpr_obfuscator" {
-  # ...
-  timeout     = 300  # 5 minutes instead of 60 seconds
-  memory_size = 1024 # 1GB instead of 512MB
-}
-```
-
-Then apply:
-```bash
-terraform apply
-```
-
----
-
 ## Security Best Practices
 
 ### Secrets Management
@@ -482,25 +412,6 @@ Current deployment uses `*FullAccess` policies for simplicity.
 
 ---
 
-## Cost Estimation
-
-**Monthly costs for light usage:**
-
-- Lambda: $0.00 (Free tier: 1M requests/month)
-- S3 Storage: ~$0.01 (few GB)
-- S3 Requests: ~$0.01
-- Secrets Manager: $0.40/secret
-- CloudWatch Logs: ~$0.50
-
-**Total: ~$1-2/month** for development/testing
-
-**Production costs scale with:**
-- Number of Lambda invocations
-- S3 storage size
-- Data transfer
-
----
-
 ## Cleanup (Remove Everything)
 
 When done testing:
@@ -522,91 +433,3 @@ terraform destroy
 ⚠️ **This deletes everything!** Make sure to backup any important data first.
 
 ---
-
-## Production Deployment Checklist
-
-Before deploying to production:
-
-- [ ] Use custom IAM policies (not *FullAccess)
-- [ ] Enable MFA for AWS account
-- [ ] Set up CloudWatch Alarms
-- [ ] Configure VPC for Lambda (if needed)
-- [ ] Enable S3 versioning
-- [ ] Set up backup/disaster recovery
-- [ ] Document runbook for incidents
-- [ ] Test with production-size data
-- [ ] Review security with team
-- [ ] Get approval from security/compliance
-
----
-
-## Next Steps
-
-### Automation
-
-1. **EventBridge** - Auto-trigger on S3 upload
-2. **Step Functions** - Multi-step workflows
-3. **CI/CD** - GitHub Actions deployment
-
-See example EventBridge rule:
-```bash
-# Create rule to trigger Lambda on S3 upload
-aws events put-rule \
-  --name gdpr-obfuscator-trigger \
-  --event-pattern '{
-    "source": ["aws.s3"],
-    "detail-type": ["Object Created"],
-    "detail": {
-      "bucket": {
-        "name": ["gdpr-input-YOUR-NAME-12345"]
-      }
-    }
-  }'
-```
-
-### Monitoring
-
-Set up CloudWatch Dashboard for:
-- Lambda invocations
-- Error rates
-- Processing duration
-- S3 storage metrics
-
----
-
-## Support
-
-**Issues?** Check:
-1. CloudWatch Logs for errors
-2. IAM permissions
-3. S3 bucket names are unique
-4. Terraform state is not corrupted
-
-**For questions:**
-- Review README.md
-- Check EXTENSION_PLAN.md for future features
-- AWS Documentation: https://docs.aws.amazon.com
-
----
-
-## Summary
-
-You've successfully deployed GDPR Obfuscator to AWS! 🎉
-
-**What's working:**
-- ✅ Lambda function processes CSV files
-- ✅ S3 buckets with encryption
-- ✅ Secrets Manager stores HMAC key
-- ✅ PII is replaced with deterministic tokens
-- ✅ Complete infrastructure as code
-
-**Architecture:**
-```
-S3 Input Bucket → Lambda Function → S3 Output Bucket
-                      ↓
-                Secrets Manager (HMAC key)
-                      ↓
-                CloudWatch Logs
-```
-
-Ready for production after security review and proper IAM policies! 🚀
