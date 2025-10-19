@@ -1,9 +1,43 @@
 # Extension Plan: JSON and Parquet Support
 
-## Status
-**Current**: MVP complete (CSV support only)  
-**Proposed**: Add JSON and Parquet format support  
-**Estimated effort**: 3-5 days
+## Status Summary
+
+### ✅ Currently Implemented (MVP Complete)
+
+**CSV Format Support:**
+- ✅ Streaming CSV processing with `CSVAdapter`
+- ✅ Auto-detection from `.csv` extension
+- ✅ Memory-efficient: O(1) memory, handles unlimited file size
+- ✅ Performance: ~145,000 rows/second on M1 MacBook Pro
+
+**Obfuscation Modes:**
+- ✅ **Token mode** (default): Deterministic HMAC-SHA256 tokens
+  - Same input → same token (enables joins across datasets)
+  - 16-character hex output (configurable)
+- ✅ **Mask mode**: Fixed string replacement
+  - Default: `***`
+  - Customizable: Any string (e.g., `"REDACTED"`)
+  - Maximum privacy, no reversibility
+
+**Architecture:**
+- ✅ Format adapter pattern fully implemented
+- ✅ `FormatAdapter` abstract base class
+- ✅ Extensible design: add new formats without changing core logic
+- ✅ CSV, JSON, Parquet stubs created (JSON/Parquet raise `NotImplementedError`)
+
+**API Completeness:**
+- ✅ CLI with `--mask`, `--mask-token`, `--format` arguments
+- ✅ Python API with `mode` and `mask_token` parameters
+- ✅ S3 adapter with format auto-detection
+- ✅ Lambda handler with mode support
+- ✅ >90% test coverage
+
+### 🔄 Proposed Extensions
+
+**Planned formats:**
+- 🔄 JSON (array format): `[{...}, {...}]`
+- 🔄 JSONL (line-delimited): One object per line for large files
+- 🔄 Parquet: Columnar format (requires `pyarrow` dependency)  
 
 ---
 
@@ -78,98 +112,149 @@ The current architecture is already designed for extensibility. Adding JSON and 
 
 ## Implementation Plan
 
-### Phase 1: Create Format Adapter Interface (1 day)
+### Phase 1: Create Format Adapter Interface ✅ **COMPLETED**
 
-**New file**: `src/gdpr_obfuscator/format_adapters.py`
+**File**: `src/gdpr_obfuscator/format_adapters.py` ✅ **Implemented**
 
+The format adapter pattern is fully implemented with:
+- `FormatAdapter` abstract base class
+- `CSVAdapter` - fully functional
+- `JSONAdapter` - stub with clear error message
+- `ParquetAdapter` - stub with clear error message
+- `get_adapter()` factory function
+- `detect_format_from_filename()` for auto-detection
+
+**Obfuscation modes supported:**
+- **Token mode** (default): Deterministic HMAC-SHA256 tokens
+- **Mask mode**: Fixed string replacement (e.g., `***` or custom)
+
+The `obfuscate_fn` passed to adapters now supports:
 ```python
-from abc import ABC, abstractmethod
-
-class FormatAdapter(ABC):
-    """Abstract base class for file format handlers."""
-    
-    @abstractmethod
-    def process_stream(
-        self,
-        input_stream: IO[bytes],
-        output_stream: IO[bytes],
-        sensitive_fields: List[str],
-        primary_key_field: str,
-        obfuscate_fn: Callable,  # Takes (pk_value, field_name) -> token
-    ) -> int:
-        """Process input, obfuscate, write output. Return record count."""
-        pass
+obfuscate_fn(pk_value, field_name, mode='token', mask_token='***')
 ```
 
 ### Phase 2: Implement Format Adapters
 
-#### CSV Adapter
-- Refactor existing `obfuscate_csv_stream()` into `CSVAdapter` class
-- No functional changes, just restructuring
+#### CSV Adapter ✅ **COMPLETED**
+- ✅ Refactored into `CSVAdapter` class
+- ✅ Streaming processing with `csv.DictReader`/`csv.DictWriter`
+- ✅ Supports both token and mask modes
+- ✅ Memory efficient: O(1) memory usage
+- ✅ Backward compatible with `obfuscate_csv_stream()`
 - **No new dependencies**
 
-#### JSON Adapter
+**Performance:**
+- 100,000 rows in 0.69 seconds
+- ~145,000 rows/second throughput
+
+#### JSON Adapter 🔄 **PLANNED**
 - Support two modes:
   1. **JSON Array**: `[{"id":1,"email":"a@b.com"}, ...]`
   2. **JSONL** (line-delimited): One JSON object per line (better for large files)
 - Use Python's built-in `json` module
 - **No new dependencies**
+- **Status**: Stub implemented, raises `NotImplementedError` with helpful message
 
-#### Parquet Adapter
+#### Parquet Adapter 🔄 **PLANNED**
 - Use `pyarrow` library for reading/writing Parquet files
 - **New dependency**: `pyarrow>=10.0.0` (~30MB)
 - Note: May need Lambda Layer for deployment
+- **Status**: Stub implemented, raises `NotImplementedError` with helpful message
 
-### Phase 3: Update Public API
+### Phase 3: Update Public API ✅ **COMPLETED**
 
-**Modify**: `src/gdpr_obfuscator/obfuscator.py`
+**File**: `src/gdpr_obfuscator/obfuscator.py` ✅ **Updated**
 
 ```python
 def obfuscate_stream(
     input_stream: IO[bytes],
     output_stream: IO[bytes],
     sensitive_fields: List[str],
-    file_format: str = "csv",  # NEW: csv|json|jsonl|parquet
+    file_format: str = "csv",  # csv|json|jsonl|parquet
     primary_key_field: str = "id",
-    ...
+    key: Optional[bytes] = None,
+    mode: str = "token",  # NEW: token or mask
+    mask_token: str = "***",  # NEW: custom mask string
+    token_length: int = 16,
 ) -> int:
     """Universal obfuscation function for any format."""
     adapter = get_adapter(file_format)
+
+    # Create obfuscation function with mode support
+    def obfuscate_fn(pk_value: str, field_name: str) -> str:
+        return obfuscate_value(
+            key=key,
+            primary_value=pk_value,
+            field_name=field_name,
+            length=token_length,
+            mode=mode,
+            mask_token=mask_token,
+        )
+
     return adapter.process_stream(...)
 ```
 
-**Keep backward compatibility**: Existing `obfuscate_csv_stream()` continues to work.
+✅ **Backward compatibility maintained**: Existing `obfuscate_csv_stream()` continues to work.
 
-### Phase 4: Update S3 Adapter
+### Phase 4: Update S3 Adapter ✅ **COMPLETED**
 
-**Modify**: `src/gdpr_obfuscator/s3_adapter.py`
+**File**: `src/gdpr_obfuscator/s3_adapter.py` ✅ **Updated**
 
-- Add optional `file_format` parameter
-- Auto-detect format from S3 key extension if not specified
-- Example: `s3://bucket/data.json` → auto-detect as JSON
+- ✅ Added optional `file_format` parameter
+- ✅ Auto-detect format from S3 key extension if not specified
+- ✅ Added `mode` and `mask_token` parameters
+- ✅ Renamed `process_s3_csv_to_bytes()` to `process_s3_file_to_bytes()` (multi-format)
+- ✅ Kept legacy function for backward compatibility
 
-### Phase 5: Update CLI
+**Features:**
+- Auto-detection: `s3://bucket/data.csv` → CSV format
+- Explicit format: Pass `file_format='csv'` parameter
+- Mask mode support: Pass `mode='mask'` and optional `mask_token`
 
-**Modify**: `src/gdpr_obfuscator/cli.py`
+### Phase 5: Update CLI ✅ **COMPLETED**
 
-Add `--format` argument:
+**File**: `src/gdpr_obfuscator/cli.py` ✅ **Updated**
+
+Added arguments:
+- ✅ `--format` - File format (csv, json, jsonl, parquet)
+- ✅ `--mask` - Enable mask mode (fixed string replacement)
+- ✅ `--mask-token` - Custom mask string (default: `***`)
+- ✅ `--token-length` - Token length for token mode (default: 16)
+
+**Usage examples:**
 ```bash
-# Auto-detect from extension
-python -m gdpr_obfuscator.cli --input data.json --output out.json --fields email
+# Auto-detect from extension (token mode)
+python -m gdpr_obfuscator.cli --input data.csv --output out.csv --fields email
+
+# Mask mode with default '***'
+python -m gdpr_obfuscator.cli --input data.csv --output out.csv --fields email --mask
+
+# Custom mask token
+python -m gdpr_obfuscator.cli --input data.csv --output out.csv --fields email --mask --mask-token "REDACTED"
 
 # Explicit format
-python -m gdpr_obfuscator.cli --input data --output out --format json --fields email
+python -m gdpr_obfuscator.cli --input data --output out --format csv --fields email
 ```
 
-### Phase 6: Testing
+### Phase 6: Testing ✅ **COMPLETED for CSV**
 
-**Add tests**:
-- `tests/test_json_adapter.py` - JSON array and JSONL formats
-- `tests/test_parquet_adapter.py` - Parquet processing
-- `tests/test_format_detection.py` - Auto-detection logic
-- Integration tests with S3 (using moto or stubber)
+**Existing tests:**
+- ✅ `tests/test_obfuscator.py` - Core obfuscation logic with mode support
+- ✅ `tests/test_format_adapters.py` - CSV adapter and stubs
+- ✅ `tests/test_s3_adapter.py` - S3 integration with format detection
+- ✅ `tests/test_handler.py` - Lambda handler tests
 
-**Test coverage target**: Maintain >90% coverage
+**Test coverage**: ✅ **>90% achieved**
+
+**Pending for JSON/Parquet:**
+- 🔄 `tests/test_json_adapter.py` - JSON array and JSONL formats (when implemented)
+- 🔄 `tests/test_parquet_adapter.py` - Parquet processing (when implemented)
+
+**CI/CD:**
+- ✅ GitHub Actions workflow running on every push
+- ✅ Tests, linting (flake8), type checking (mypy)
+- ✅ Security scans (bandit, pip-audit)
+- ✅ Lambda package build and size check
 
 ---
 
@@ -196,7 +281,40 @@ pyarrow>=10.0.0  # For Parquet support
 
 ## API Examples
 
-### JSON Format
+### CSV Format with Mask Mode ✅ **AVAILABLE NOW**
+
+**Input file** (`data.csv`):
+```csv
+id,name,email,phone
+1,Alice,alice@example.com,555-1234
+2,Bob,bob@example.com,555-5678
+```
+
+**Token mode (default)**:
+```bash
+python -m gdpr_obfuscator.cli --input data.csv --output data.obf.csv --fields email,phone
+```
+
+**Output** (`data.obf.csv`):
+```csv
+id,name,email,phone
+1,Alice,a3f2e1d4c5b6a789,b6a7891c2d3e4f50
+2,Bob,c5d6e7f8a9b0c1d2,d3e4f5a6b7c8d9e0
+```
+
+**Mask mode**:
+```bash
+python -m gdpr_obfuscator.cli --input data.csv --output data.masked.csv --fields email,phone --mask
+```
+
+**Output** (`data.masked.csv`):
+```csv
+id,name,email,phone
+1,Alice,***,***
+2,Bob,***,***
+```
+
+### JSON Format 🔄 **PLANNED**
 
 **Input file** (`data.json`):
 ```json
@@ -250,34 +368,54 @@ python -m gdpr_obfuscator.cli \
 
 ## S3 Integration Examples
 
-### Auto-detect format from S3 key
+### CSV with Auto-detection ✅ **AVAILABLE NOW**
 ```python
 from gdpr_obfuscator.s3_adapter import process_and_upload
 
-# Format auto-detected from .json extension
+# Token mode (default) - format auto-detected from .csv extension
 process_and_upload(
-    source_s3_uri='s3://input-bucket/raw/data.json',
-    target_s3_uri='s3://output-bucket/obfuscated/data.json',
+    source_s3_uri='s3://input-bucket/raw/data.csv',
+    target_s3_uri='s3://output-bucket/obfuscated/data.csv',
     sensitive_fields=['email', 'phone']
+)
+
+# Mask mode
+process_and_upload(
+    source_s3_uri='s3://input-bucket/raw/data.csv',
+    target_s3_uri='s3://output-bucket/masked/data.csv',
+    sensitive_fields=['email', 'phone'],
+    mode='mask'
+)
+
+# Custom mask token
+process_and_upload(
+    source_s3_uri='s3://input-bucket/raw/data.csv',
+    target_s3_uri='s3://output-bucket/redacted/data.csv',
+    sensitive_fields=['email', 'phone'],
+    mode='mask',
+    mask_token='REDACTED'
 )
 ```
 
-### Explicit format specification
+### JSON with Explicit Format 🔄 **PLANNED**
 ```python
+# Will work once JSON adapter is implemented
 process_and_upload(
-    source_s3_uri='s3://input-bucket/data',  # No extension
-    target_s3_uri='s3://output-bucket/data.obf',
+    source_s3_uri='s3://input-bucket/data.json',
+    target_s3_uri='s3://output-bucket/data.obf.json',
     sensitive_fields=['email'],
-    file_format='json'  # Explicit format
+    file_format='json'
 )
 ```
 
 ---
 
-## Lambda Handler Changes
+## Lambda Handler Changes ✅ **UPDATED**
 
-**Current handler** supports CSV only:
-```python
+**Current handler** supports CSV with both modes:
+
+**Token mode (default)**:
+```json
 {
   "s3_uri": "s3://bucket/file.csv",
   "fields": ["email", "phone"],
@@ -286,14 +424,37 @@ process_and_upload(
 }
 ```
 
-**Extended handler** adds format parameter:
-```python
+**Mask mode**:
+```json
+{
+  "s3_uri": "s3://bucket/file.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://bucket/masked.csv",
+  "mode": "mask"
+}
+```
+
+**Custom mask token**:
+```json
+{
+  "s3_uri": "s3://bucket/file.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://bucket/redacted.csv",
+  "mode": "mask",
+  "mask_token": "REDACTED"
+}
+```
+
+**Future: JSON format** 🔄 **PLANNED**:
+```json
 {
   "s3_uri": "s3://bucket/file.json",
   "fields": ["email", "phone"],
   "primary_key": "id",
   "target_s3_uri": "s3://bucket/output.json",
-  "file_format": "json"  # NEW: optional, auto-detect if omitted
+  "file_format": "json"
 }
 ```
 

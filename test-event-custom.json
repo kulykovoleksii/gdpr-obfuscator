@@ -1,0 +1,8 @@
+{
+  "s3_uri": "s3://gdpr-input-oleksii-12345/test-input.csv",
+  "fields": ["email", "phone"],
+  "primary_key": "id",
+  "target_s3_uri": "s3://gdpr-output-oleksii-12345/test-redacted.csv",
+  "mode": "mask",
+  "mask_token": "REDACTED"
+}

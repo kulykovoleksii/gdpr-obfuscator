@@ -17,8 +17,9 @@ def main(argv=None):
     p.add_argument("--fields", required=True)  # comma separated
     p.add_argument("--pk", default="id")
     p.add_argument(
-        "--mask", action="store_true", help="Use fixed mask '***' instead of tokens"
+        "--mask", action="store_true", help="Use fixed mask instead of tokens"
     )
+    p.add_argument("--mask-token", default="***", help="Custom mask string (default: ***)")
 
     args = p.parse_args(argv)
     key = os.getenv("OBFUSCATOR_KEY")
@@ -49,7 +50,7 @@ def main(argv=None):
             primary_key_field=args.pk,
             key=key.encode("utf-8"),
             mode=mode,
-            mask_token="***",  # nosec B106
+            mask_token=args.mask_token,
         )
 
 
