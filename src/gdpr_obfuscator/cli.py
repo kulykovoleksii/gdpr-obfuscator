@@ -19,7 +19,9 @@ def main(argv=None):
     p.add_argument(
         "--mask", action="store_true", help="Use fixed mask instead of tokens"
     )
-    p.add_argument("--mask-token", default="***", help="Custom mask string (default: ***)")
+    p.add_argument(
+        "--mask-token", default="***", help="Custom mask string (default: ***)"
+    )
 
     args = p.parse_args(argv)
     key = os.getenv("OBFUSCATOR_KEY")
