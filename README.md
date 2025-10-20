@@ -836,13 +836,6 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed guide including:
 - S3 bucket creation
 - Terraform configuration
 - Testing and verification
-- Troubleshooting
-
----
-
-## License
-
-Internal project for Northcoders Data Engineering Bootcamp.
 
 ---
 
