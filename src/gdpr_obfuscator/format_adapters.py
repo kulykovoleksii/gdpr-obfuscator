@@ -4,7 +4,7 @@ CSV is fully implemented. JSON and Parquet are stubs for future implementation.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, IO, Callable, Union, Dict, Type
+from typing import List, IO, Callable, Union, Dict, Type, Optional
 import csv
 import logging
 
@@ -27,7 +27,7 @@ class FormatAdapter(ABC):
         input_stream: IO[bytes],
         output_stream: IO[bytes],
         sensitive_fields: List[str],
-        primary_key_field: str,
+        primary_key_field: Optional[str],
         obfuscate_fn: Callable[[str, str], str],
     ) -> int:
         """
@@ -37,7 +37,8 @@ class FormatAdapter(ABC):
             input_stream: Binary input stream
             output_stream: Binary output stream
             sensitive_fields: List of field names to obfuscate
-            primary_key_field: Name of primary key field
+            primary_key_field: Name of primary key field, or None when
+                the obfuscation does not depend on it (mask mode)
             obfuscate_fn: Function that takes (pk_value, field_name) and returns token
 
         Returns:
@@ -59,7 +60,7 @@ class CSVAdapter(FormatAdapter):
         input_stream: IO[bytes],
         output_stream: IO[bytes],
         sensitive_fields: List[str],
-        primary_key_field: str,
+        primary_key_field: Optional[str],
         obfuscate_fn: Callable[[str, str], str],
     ) -> int:
         """Process CSV format using streaming approach."""
@@ -74,6 +75,11 @@ class CSVAdapter(FormatAdapter):
             reader = csv.DictReader(text_in)
             if not reader.fieldnames:
                 raise ValueError("CSV has no header row")
+            if primary_key_field and primary_key_field not in reader.fieldnames:
+                raise ValueError(
+                    f"Primary key field '{primary_key_field}' not found in CSV "
+                    f"header: {reader.fieldnames}"
+                )
 
             writer = csv.DictWriter(text_out, fieldnames=reader.fieldnames)
             writer.writeheader()
@@ -81,7 +87,7 @@ class CSVAdapter(FormatAdapter):
             count = 0
             for row in reader:
                 count += 1
-                pk_value = row.get(primary_key_field, "")
+                pk_value = row[primary_key_field] if primary_key_field else ""
 
                 # Obfuscate each sensitive field
                 for field in sensitive_fields:
@@ -121,7 +127,7 @@ class JSONAdapter(FormatAdapter):
         input_stream: IO[bytes],
         output_stream: IO[bytes],
         sensitive_fields: List[str],
-        primary_key_field: str,
+        primary_key_field: Optional[str],
         obfuscate_fn: Callable[[str, str], str],
     ) -> int:
         """Stub implementation - raises NotImplementedError."""
@@ -150,7 +156,7 @@ class ParquetAdapter(FormatAdapter):
         input_stream: IO[bytes],
         output_stream: IO[bytes],
         sensitive_fields: List[str],
-        primary_key_field: str,
+        primary_key_field: Optional[str],
         obfuscate_fn: Callable[[str, str], str],
     ) -> int:
         """Stub implementation - raises NotImplementedError."""

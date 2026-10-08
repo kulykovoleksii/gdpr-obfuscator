@@ -129,7 +129,8 @@ def obfuscate_stream(
         input_stream=input_stream,
         output_stream=output_stream,
         sensitive_fields=sensitive_fields,
-        primary_key_field=primary_key_field,
+        # Mask mode does not use the primary key, so it is not required
+        primary_key_field=primary_key_field if mode == "token" else None,
         obfuscate_fn=obfuscate_fn,
     )
 

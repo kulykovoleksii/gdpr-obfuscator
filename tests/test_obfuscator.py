@@ -1,6 +1,9 @@
 import io
 import csv
 import string
+
+import pytest
+
 from gdpr_obfuscator.obfuscator import obfuscate_value, obfuscate_csv_stream
 
 
@@ -97,3 +100,29 @@ def test_mask_mode_applies(monkeypatch):
     txt = out.read()
     assert "***" in txt
     assert "a@x.com" not in txt
+
+
+def test_token_mode_requires_primary_key_column():
+    inp = io.StringIO("user_id,email\n1,a@x.com\n2,b@x.com\n")
+    out = io.StringIO()
+
+    with pytest.raises(ValueError, match="Primary key field 'id' not found"):
+        obfuscate_csv_stream(
+            inp, out, sensitive_fields=["email"], primary_key_field="id", key=b"k"
+        )
+
+
+def test_mask_mode_does_not_require_primary_key_column():
+    inp = io.StringIO("user_id,email\n1,a@x.com\n")
+    out = io.StringIO()
+
+    obfuscate_csv_stream(
+        inp,
+        out,
+        sensitive_fields=["email"],
+        primary_key_field="id",
+        key=b"k",
+        mode="mask",
+    )
+
+    assert "a@x.com" not in out.getvalue()
