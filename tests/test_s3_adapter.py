@@ -1,5 +1,7 @@
 import io
-from botocore.stub import Stubber
+
+import pytest
+from botocore.stub import ANY, Stubber
 
 # import the function and the client from your module
 from gdpr_obfuscator import s3_adapter
@@ -45,3 +47,61 @@ def test_process_s3_csv_to_bytes(monkeypatch):
     # header and id should remain
     assert "id" in txt
     assert "Alice" in txt
+
+
+def test_process_and_upload_puts_obfuscated_file(monkeypatch):
+    monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
+    client = s3_adapter.s3
+    stub = Stubber(client)
+    stub.add_response(
+        "get_object",
+        {"Body": io.BytesIO(SAMPLE_CSV.encode("utf-8"))},
+        {"Bucket": "in-bucket", "Key": "raw/data.csv"},
+    )
+    stub.add_response(
+        "put_object",
+        {},
+        {"Bucket": "out-bucket", "Key": "obf/data.csv", "Body": ANY},
+    )
+
+    stub.activate()
+    try:
+        s3_adapter.process_and_upload(
+            source_s3_uri="s3://in-bucket/raw/data.csv",
+            target_s3_uri="s3://out-bucket/obf/data.csv",
+            sensitive_fields=["email"],
+            mode="mask",
+        )
+    finally:
+        stub.deactivate()
+
+    stub.assert_no_pending_responses()
+
+
+def test_parse_s3_uri():
+    assert s3_adapter.parse_s3_uri("s3://bucket/a/b.csv") == ("bucket", "a/b.csv")
+    with pytest.raises(ValueError):
+        s3_adapter.parse_s3_uri("https://bucket/a.csv")
+
+
+def test_unknown_extension_requires_explicit_format():
+    with pytest.raises(ValueError, match="Cannot auto-detect format"):
+        s3_adapter.process_s3_file_to_bytes("s3://bucket/data.xml", ["email"])
+
+
+def test_not_implemented_format_is_reported(monkeypatch):
+    monkeypatch.setenv("OBFUSCATOR_KEY", "testkey")
+    client = s3_adapter.s3
+    stub = Stubber(client)
+    stub.add_response(
+        "get_object",
+        {"Body": io.BytesIO(b"[]")},
+        {"Bucket": "bucket", "Key": "data.json"},
+    )
+
+    stub.activate()
+    try:
+        with pytest.raises(NotImplementedError, match="Format 'json'"):
+            s3_adapter.process_s3_file_to_bytes("s3://bucket/data.json", ["email"])
+    finally:
+        stub.deactivate()
