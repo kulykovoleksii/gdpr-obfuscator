@@ -1,7 +1,8 @@
 import argparse
 import os
 import logging
-from .obfuscator import obfuscate_csv_stream
+from .format_adapters import detect_format_from_filename
+from .obfuscator import obfuscate_stream
 
 
 def main(argv=None):
@@ -22,6 +23,17 @@ def main(argv=None):
     p.add_argument(
         "--mask-token", default="***", help="Custom mask string (default: ***)"
     )
+    p.add_argument(
+        "--format",
+        choices=["csv", "json", "jsonl", "parquet"],
+        help="File format (default: detect from input file extension)",
+    )
+    p.add_argument(
+        "--token-length",
+        type=int,
+        default=16,
+        help="Length of hex tokens in token mode (default: 16)",
+    )
 
     args = p.parse_args(argv)
     key = os.getenv("OBFUSCATOR_KEY")
@@ -40,19 +52,19 @@ def main(argv=None):
     )
 
     mode = "mask" if args.mask else "token"
+    file_format = args.format or detect_format_from_filename(args.input)
 
-    with (
-        open(args.input, "r", encoding="utf-8") as fin,
-        open(args.output, "w", encoding="utf-8", newline="") as fout,
-    ):
-        obfuscate_csv_stream(
+    with open(args.input, "rb") as fin, open(args.output, "wb") as fout:
+        obfuscate_stream(
             fin,
             fout,
             sensitive,
+            file_format=file_format,
             primary_key_field=args.pk,
             key=key.encode("utf-8"),
             mode=mode,
             mask_token=args.mask_token,
+            token_length=args.token_length,
         )
 
 
