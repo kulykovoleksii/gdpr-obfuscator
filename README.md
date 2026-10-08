@@ -23,7 +23,7 @@ This tool creates a copy of CSV files and replaces personal data with safe, dete
 ### Key Features
 
 - **Deterministic obfuscation**: Same input always produces same token (allows joins)
-- **Streaming processing**: Low memory footprint, handles large files
+- **Streaming processing**: CSV is read and written row by row
 - **AWS-native**: Designed for Lambda, ECS, or EC2 deployment
 - **Security-first**: No credentials in code, uses AWS Secrets Manager
 - **Well-tested**: Unit tests with >90% coverage, security scans
@@ -261,7 +261,9 @@ gdpr-obfuscator/
 │   ├── test_obfuscator.py       # Core logic tests
 │   ├── test_format_adapters.py  # Format adapter tests
 │   ├── test_s3_adapter.py       # S3 integration tests
-│   └── test_handler.py          # Handler tests
+│   ├── test_handler.py          # Handler tests
+│   ├── test_lambda_entry.py     # Lambda handler tests
+│   └── test_cli.py              # CLI tests
 ├── terraform/                   # Infrastructure as Code
 │   ├── main.tf
 │   ├── variables.tf
@@ -339,13 +341,16 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push:
 
 ## AWS Deployment
 
+For complete step-by-step instructions (IAM user setup, S3 buckets,
+Terraform configuration, testing), see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
 ### Lambda Deployment
 
 ```bash
 # Build Lambda package
 ./scripts/build_lambda.sh
 
-# Output: function.zip (~10MB for MVP)
+# Output: function.zip (~17MB, mostly boto3)
 ```
 
 ### Terraform Deployment
@@ -501,9 +506,11 @@ time python -m gdpr_obfuscator.cli \
 ```
 
 **Memory usage:**
-- Streaming processing: O(1) memory
-- Peak memory: ~50MB (constant, regardless of file size)
-- No loading entire file into memory
+- CLI: rows are streamed from the input file to the output file, so memory
+  use does not grow with file size
+- S3 / Lambda: the input is streamed from S3, but the obfuscated result is
+  kept in memory before upload, so memory use grows with the output size.
+  Lambda memory (512MB) must be larger than the obfuscated file
 
 **Lambda configuration:**
 - Memory: 512MB
@@ -747,6 +754,13 @@ python -m gdpr_obfuscator.cli --input data.csv --output data.redacted.csv --fiel
 export OBFUSCATOR_KEY="your-key-here"
 ```
 
+**Issue:** `ValueError: Primary key field 'id' not found in CSV header`
+```bash
+# Solution: pass the real primary key column name
+python -m gdpr_obfuscator.cli --input data.csv --output out.csv \
+  --fields email --pk user_id
+```
+
 **Issue:** `NotImplementedError: JSON format support is not yet implemented`
 ```bash
 # Solution: Use CSV format (or wait for implementation)
@@ -811,31 +825,6 @@ See [EXTENSION_PLAN.md](EXTENSION_PLAN.md) for detailed guide.
 - Planned: Parquet format (stub implemented, architecture ready)
 - Done: output format matches input format (by design)
 - Done: extensible architecture (adapter pattern)
-
----
-## AWS Deployment
-
-For complete step-by-step AWS deployment instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
-
-**Quick start:**
-```bash
-# 1. Configure AWS credentials
-aws configure
-
-# 2. Build Lambda package
-./scripts/build_lambda.sh
-
-# 3. Deploy with Terraform
-cd terraform
-terraform init
-terraform apply
-```
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed guide including:
-- IAM user setup
-- S3 bucket creation
-- Terraform configuration
-- Testing and verification
 
 ---
 
