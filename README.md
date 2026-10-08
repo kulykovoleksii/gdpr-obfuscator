@@ -6,10 +6,10 @@ A production-ready tool for obfuscating personally identifiable information (PII
 
 | Format | Status | Notes |
 |--------|--------|-------|
-| **CSV** | ✅ Implemented | Fully functional, tested, production-ready |
-| **JSON** | 🔄 Planned | Architecture ready, implementation pending |
-| **JSONL** | 🔄 Planned | Architecture ready, implementation pending |
-| **Parquet** | 🔄 Planned | Architecture ready, implementation pending |
+| **CSV** | Implemented | Fully functional, tested, production-ready |
+| **JSON** | Planned | Architecture ready, implementation pending |
+| **JSONL** | Planned | Architecture ready, implementation pending |
+| **Parquet** | Planned | Architecture ready, implementation pending |
 
 **MVP Focus**: CSV format (fully working)  
 **Architecture**: Designed for multi-format support using adapter pattern
@@ -22,12 +22,12 @@ This tool creates a copy of CSV files and replaces personal data with safe, dete
 
 ### Key Features
 
-- ✅ **Deterministic obfuscation**: Same input always produces same token (allows joins)
-- ✅ **Streaming processing**: Low memory footprint, handles large files
-- ✅ **AWS-native**: Designed for Lambda, ECS, or EC2 deployment
-- ✅ **Security-first**: No credentials in code, uses AWS Secrets Manager
-- ✅ **Well-tested**: Unit tests with >90% coverage, security scans
-- ✅ **PEP-8 compliant**: Linted with flake8, type-checked with mypy
+- **Deterministic obfuscation**: Same input always produces same token (allows joins)
+- **Streaming processing**: Low memory footprint, handles large files
+- **AWS-native**: Designed for Lambda, ECS, or EC2 deployment
+- **Security-first**: No credentials in code, uses AWS Secrets Manager
+- **Well-tested**: Unit tests with >90% coverage, security scans
+- **PEP-8 compliant**: Linted with flake8, type-checked with mypy
 
 ---
 
@@ -119,7 +119,7 @@ python -m gdpr_obfuscator.cli \
 
 ## File Format Support
 
-### CSV Format (✅ Implemented)
+### CSV Format (implemented)
 
 **Input Example** (`data.csv`):
 ```csv
@@ -159,7 +159,7 @@ id,full_name,email,phone
 2,Bob Jones,***,***
 ```
 
-### JSON Format (🔄 Planned)
+### JSON Format (planned)
 
 **Architecture is ready**. When implemented, will support:
 
@@ -186,11 +186,11 @@ Currently only CSV format is supported.
 See EXTENSION_PLAN.md for implementation details.
 ```
 
-### JSONL Format (🔄 Planned)
+### JSONL Format (planned)
 
 Line-delimited JSON for large streaming datasets.
 
-### Parquet Format (🔄 Planned)
+### Parquet Format (planned)
 
 Columnar format, requires `pyarrow` dependency.
 
@@ -214,14 +214,14 @@ Columnar format, requires `pyarrow` dependency.
 └──────────┬───────────────┘
            │
            ▼
-┌──────────────────────────┐
-│  Format Adapter          │
-│  ┌────────────────────┐  │
-│  │ CSVAdapter    ✅   │  │
-│  │ JSONAdapter   🔄   │  │
-│  │ ParquetAdapter 🔄  │  │
-│  └────────────────────┘  │
-└──────────┬───────────────┘
+┌────────────────────────────────────┐
+│  Format Adapter                    │
+│  ┌──────────────────────────────┐  │
+│  │ CSVAdapter     (implemented) │  │
+│  │ JSONAdapter    (planned)     │  │
+│  │ ParquetAdapter (planned)     │  │
+│  └──────────────────────────────┘  │
+└──────────┬─────────────────────────┘
            │
            ▼
 ┌──────────────────────────┐
@@ -329,11 +329,11 @@ black src tests
 ### CI/CD
 
 GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push:
-- ✅ Unit tests with coverage
-- ✅ Linting (flake8)
-- ✅ Type checking (mypy)
-- ✅ Security scans (bandit, pip-audit)
-- ✅ Lambda package build and size check
+- Unit tests with coverage
+- Linting (flake8)
+- Type checking (mypy)
+- Security scans (bandit, pip-audit)
+- Lambda package build and size check
 
 ---
 
@@ -520,12 +520,12 @@ time python -m gdpr_obfuscator.cli \
 The codebase is **architecturally ready** for JSON and Parquet formats using the adapter pattern. The core obfuscation logic (`obfuscate_value()`) is format-agnostic.
 
 **What's implemented:**
-- ✅ Format adapter interface (`FormatAdapter` abstract base class)
-- ✅ CSV adapter (fully functional)
-- ✅ JSON adapter (stub with clear error message)
-- ✅ Parquet adapter (stub with clear error message)
-- ✅ Format auto-detection from filename
-- ✅ Tests for adapter pattern and stubs
+- Format adapter interface (`FormatAdapter` abstract base class)
+- CSV adapter (fully functional)
+- JSON adapter (stub with clear error message)
+- Parquet adapter (stub with clear error message)
+- Format auto-detection from filename
+- Tests for adapter pattern and stubs
 
 **What's needed for JSON:**
 - Implement `JSONAdapter.process_stream()` using Python's `json` module
@@ -653,11 +653,11 @@ export OBFUSCATOR_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))
 
 ### Important Security Rules
 
-1. ❌ **NEVER** commit `OBFUSCATOR_KEY` to git
-2. ❌ **NEVER** log sensitive data or tokens
-3. ✅ **ALWAYS** use Secrets Manager in production
-4. ✅ **ALWAYS** use IAM roles (no access keys)
-5. ✅ **ALWAYS** enable S3 bucket encryption
+1. **NEVER** commit `OBFUSCATOR_KEY` to git
+2. **NEVER** log sensitive data or tokens
+3. **ALWAYS** use Secrets Manager in production
+4. **ALWAYS** use IAM roles (no access keys)
+5. **ALWAYS** enable S3 bucket encryption
 
 ### Obfuscation Modes
 
@@ -791,26 +791,26 @@ See [EXTENSION_PLAN.md](EXTENSION_PLAN.md) for detailed guide.
 
 ## Requirements Met
 
-### MVP Requirements (✅ Complete)
+### MVP Requirements (done)
 
-- ✅ CSV format support
-- ✅ S3 integration (download/upload)
-- ✅ HMAC-SHA256 obfuscation
-- ✅ Deterministic tokens (primary key based)
-- ✅ Configurable sensitive fields
-- ✅ Lambda-compatible package (<50MB)
-- ✅ Unit tests with >90% coverage
-- ✅ PEP-8 compliant
-- ✅ Security scans (bandit, pip-audit)
-- ✅ No hardcoded credentials
-- ✅ Documentation
+- CSV format support
+- S3 integration (download/upload)
+- HMAC-SHA256 obfuscation
+- Deterministic tokens (primary key based)
+- Configurable sensitive fields
+- Lambda-compatible package (<50MB)
+- Unit tests with >90% coverage
+- PEP-8 compliant
+- Security scans (bandit, pip-audit)
+- No hardcoded credentials
+- Documentation
 
-### Extension Requirements (🔄 Architecturally Ready)
+### Extension Requirements (partially done)
 
-- 🔄 JSON format (stub implemented, architecture ready)
-- 🔄 Parquet format (stub implemented, architecture ready)
-- ✅ Output format matches input format (by design)
-- ✅ Extensible architecture (adapter pattern)
+- Planned: JSON format (stub implemented, architecture ready)
+- Planned: Parquet format (stub implemented, architecture ready)
+- Done: output format matches input format (by design)
+- Done: extensible architecture (adapter pattern)
 
 ---
 ## AWS Deployment
