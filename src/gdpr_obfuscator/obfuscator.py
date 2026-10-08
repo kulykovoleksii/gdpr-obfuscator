@@ -13,6 +13,7 @@ from .format_adapters import get_adapter
 
 logger = logging.getLogger(__name__)
 KEY_ENV = "OBFUSCATOR_KEY"
+MODES = ("token", "mask")
 
 
 def _get_key() -> bytes:
@@ -95,7 +96,7 @@ def obfuscate_stream(
 
     Raises:
         NotImplementedError: If format is not yet implemented (JSON, Parquet)
-        ValueError: If format is not recognized
+        ValueError: If format or mode is not recognized
 
     Example:
         # CSV (works)
@@ -106,6 +107,9 @@ def obfuscate_stream(
         with open('input.json', 'rb') as fin, open('output.json', 'wb') as fout:
             obfuscate_stream(fin, fout, ['email'], file_format='json')
     """
+    if mode not in MODES:
+        raise ValueError(f"Unsupported mode: '{mode}'. Supported modes: {MODES}")
+
     if key is None:
         key = _get_key()
 

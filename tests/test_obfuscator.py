@@ -126,3 +126,14 @@ def test_mask_mode_does_not_require_primary_key_column():
     )
 
     assert "a@x.com" not in out.getvalue()
+
+
+def test_unknown_mode_is_rejected():
+    with pytest.raises(ValueError, match="Unsupported mode"):
+        obfuscate_csv_stream(
+            io.StringIO("id,email\n1,a@x.com\n"),
+            io.StringIO(),
+            sensitive_fields=["email"],
+            key=b"k",
+            mode="hash",
+        )

@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 import boto3
 
 from . import s3_adapter
+from .obfuscator import MODES
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -74,6 +75,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[str, Any]:
     target = payload.get("target_s3_uri")  # optional
     mode = payload.get("mode", "token")
     mask_token = payload.get("mask_token", "***")
+    if mode not in MODES:
+        msg = f"Invalid 'mode': {mode!r}. Supported modes: {list(MODES)}"
+        logger.error(msg)
+        return {"status": "error", "message": msg}
 
     # choose path: do process+upload if target given;
     # otherwise just process and return length
