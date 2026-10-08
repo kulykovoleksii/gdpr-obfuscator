@@ -197,41 +197,6 @@ def get_adapter(file_format: str) -> Union[CSVAdapter, JSONAdapter, ParquetAdapt
 
     adapter_class = format_map[format_lower]
     return adapter_class()
-    """
-    Factory function to get appropriate adapter for file format.
-
-    Args:
-        file_format: One of 'csv', 'json', 'jsonl', 'parquet'
-
-    Returns:
-        FormatAdapter instance (CSVAdapter, JSONAdapter, or ParquetAdapter)
-
-    Raises:
-        ValueError: If format is not recognized
-        NotImplementedError: If format is recognized but not yet implemented
-
-    Example:
-        adapter = get_adapter('csv')  # Returns CSVAdapter (works)
-        adapter = get_adapter('json')  # Returns JSONAdapter
-                                        #  (raises NotImplementedError)
-    """
-    format_lower = file_format.lower()
-
-    format_map = {
-        "csv": CSVAdapter,
-        "json": JSONAdapter,
-        "jsonl": JSONAdapter,
-        "parquet": ParquetAdapter,
-    }
-
-    if format_lower not in format_map:
-        supported = list(format_map.keys())
-        raise ValueError(
-            f"Unsupported format: '{file_format}'. " f"Supported formats: {supported}"
-        )
-
-    adapter_class = format_map[format_lower]
-    return adapter_class()
 
 
 def detect_format_from_filename(filename: str) -> str:
