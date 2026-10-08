@@ -168,3 +168,22 @@ def test_csv_adapter_processes_correctly(monkeypatch):
     assert "bob@example.com" not in output_text
     assert "Alice" in output_text  # Name should not be obfuscated
     assert "Bob" in output_text
+
+
+def test_csv_adapter_handles_utf8_bom():
+    """CSV exported from Excel starts with a BOM; primary key must still be found."""
+    csv_data = "﻿id,email\n1,a@example.com\n2,b@example.com\n".encode("utf-8")
+    output_stream = BytesIO()
+
+    CSVAdapter().process_stream(
+        input_stream=BytesIO(csv_data),
+        output_stream=output_stream,
+        sensitive_fields=["email"],
+        primary_key_field="id",
+        obfuscate_fn=lambda pk, field: f"TOKEN_{pk}",
+    )
+
+    output_text = output_stream.getvalue().decode("utf-8")
+    assert output_text.startswith("id,email")
+    assert "TOKEN_1" in output_text
+    assert "TOKEN_2" in output_text

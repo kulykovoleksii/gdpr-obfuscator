@@ -65,8 +65,9 @@ class CSVAdapter(FormatAdapter):
         """Process CSV format using streaming approach."""
         from io import TextIOWrapper
 
-        # Wrap byte streams for text processing
-        text_in = TextIOWrapper(input_stream, encoding="utf-8")
+        # Wrap byte streams for text processing.
+        # utf-8-sig strips the BOM that Excel adds, so the first header matches.
+        text_in = TextIOWrapper(input_stream, encoding="utf-8-sig")
         text_out = TextIOWrapper(output_stream, encoding="utf-8", write_through=True)
 
         try:
